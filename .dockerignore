@@ -1,0 +1,9 @@
+node_modules
+.next
+build-next
+build-phase1
+dist-next
+.git
+.env*
+coverage
+playwright-report

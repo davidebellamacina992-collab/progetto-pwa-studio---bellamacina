@@ -91,4 +91,3 @@ Le transizioni possono includere `RESPINTO` o `ANNULLATO`. Per le azioni ad alto
 - `docs/SICUREZZA.md`: minacce, controlli e limiti.
 - `docs/FLUSSO_APPROVAZIONI.md`: regole e diagramma del gate umano.
 
-
