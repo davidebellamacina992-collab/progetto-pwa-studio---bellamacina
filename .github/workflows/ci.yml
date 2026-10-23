@@ -18,7 +18,7 @@ jobs:
           --health-interval 5s --health-timeout 5s --health-retries 10
     env:
       DATABASE_URL: postgresql://contabilita:contabilita@localhost:5432/contabilita?schema=public
-      APP_BASE_URL: http://127.0.0.1:3000
+      APP_BASE_URL: http://localhost:3000
       SEED_DEMO_PASSWORD: CambiaSubito-CI-2026!
       MFA_ENCRYPTION_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
     steps:
@@ -37,3 +37,4 @@ jobs:
       - run: npm run build
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
+
