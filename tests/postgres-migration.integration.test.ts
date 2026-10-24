@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 const migration = readFileSync(resolve("prisma/migrations/202610220001_phase1/migration.sql"), "utf8");
 const onboardingMigration = readFileSync(resolve("prisma/migrations/202610240001_phase2_onboarding/migration.sql"), "utf8");
+const chartImportMigration = readFileSync(resolve("prisma/migrations/202610240002_phase2_chart_import/migration.sql"), "utf8");
 let database: PGlite;
 
 const companyId = "00000000-0000-4000-8000-000000000001";
@@ -26,6 +27,7 @@ describe("migrazione PostgreSQL eseguibile", () => {
     database = new PGlite();
     await database.exec(migration);
     await database.exec(onboardingMigration);
+    await database.exec(chartImportMigration);
   });
 
   it("blocca la finalizzazione di una scrittura non quadrata", async () => {
@@ -69,5 +71,27 @@ describe("migrazione PostgreSQL eseguibile", () => {
       .rejects.toThrow();
     await expect(database.exec(`UPDATE "CompanyOnboarding" SET "countryCode" = 'ita' WHERE "companyId" = '${companyId}';`))
       .rejects.toThrow();
+  });
+
+  it("mantiene gli import del piano dei conti in bozza e impedisce duplicati per azienda", async () => {
+    await database.exec(
+      "INSERT INTO \"Company\" (id, name, \"updatedAt\") VALUES ('" + companyId + "', 'Azienda test isolata', now());" +
+      "INSERT INTO \"User\" (id, email, \"passwordHash\", \"displayName\", \"updatedAt\") VALUES ('" + userId +
+        "', 'utente@example.test', 'hash-fittizio', 'Utente fittizio', now());" +
+      "INSERT INTO \"ChartImport\" (id, \"companyId\", \"sourceFileName\", \"fileHash\", \"rowCount\", \"createdById\", \"updatedAt\") " +
+        "VALUES ('00000000-0000-4000-8000-000000000007', '" + companyId +
+        "', 'piano-fittizio.csv', 'hash-fittizio', 1, '" + userId + "', now());" +
+      "INSERT INTO \"ChartAccountDraftLine\" (id, \"importId\", code, name, position) " +
+        "VALUES ('00000000-0000-4000-8000-000000000008', '00000000-0000-4000-8000-000000000007', '100', 'Cassa fittizia', 1);"
+    );
+    await expect(database.exec(
+      "INSERT INTO \"ChartImport\" (id, \"companyId\", \"sourceFileName\", \"fileHash\", \"rowCount\", \"createdById\", \"updatedAt\") " +
+        "VALUES ('00000000-0000-4000-8000-000000000009', '" + companyId +
+        "', 'duplicato.csv', 'hash-fittizio', 1, '" + userId + "', now());"
+    )).rejects.toThrow();
+    await expect(database.exec(
+      "UPDATE \"ChartImport\" SET status = 'APPROVED' " +
+        "WHERE id = '00000000-0000-4000-8000-000000000007';"
+    )).rejects.toThrow();
   });
 });

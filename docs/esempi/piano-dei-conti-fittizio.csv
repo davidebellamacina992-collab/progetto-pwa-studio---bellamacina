@@ -1,0 +1,7 @@
+codice;nome;tipo;codice_padre
+1;Attivita;Classe;
+10;Disponibilita liquide;Gruppo;1
+100;Cassa fittizia;Conto;10
+110;Banca fittizia;Conto;10
+2;Passivita;Classe;
+200;Debiti fittizi verso fornitori;Conto;2

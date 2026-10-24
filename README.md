@@ -18,15 +18,19 @@ La **Fase 1 - Fondamenta** realizza l'infrastruttura trasversale su cui poggeran
 - interfaccia italiana per dashboard, richieste e registro di audit;
 - test automatici dei divieti di bypass.
 
-La **Fase 2 è in corso**. È disponibile il primo incremento verificabile:
+La **Fase 2 è in corso**. Sono disponibili due incrementi verificabili:
 
 - wizard di onboarding aziendale in cinque passaggi;
 - salvataggio automatico esclusivamente come bozza;
 - avanzamento visibile in dashboard;
 - segregazione per azienda, autorizzazione per ruolo e audit di ogni salvataggio;
+- importazione del piano dei conti da CSV UTF-8 con anteprima, controlli strutturali e gerarchici;
+- hash SHA-256 e blocco dei caricamenti duplicati per azienda;
+- conservazione delle righe importate esclusivamente come BOZZA, protetta anche da un vincolo del database;
+- segregazione per azienda, autorizzazione per ruolo e audit atomico del caricamento;
 - stato `PRONTA_PER_REVISIONE` al completamento, senza attivazione o finalizzazione automatica.
 
-Piano dei conti, anagrafiche e importazione dati saranno i prossimi incrementi della Fase 2.
+Il gate di revisione/approvazione del piano dei conti, le anagrafiche e gli altri import saranno i prossimi incrementi della Fase 2.
 
 ## Avvio in 5 minuti con Docker
 
@@ -80,7 +84,7 @@ npm run build
 
 I test E2E avviano l'app in modalita sviluppo e usano Google Chrome installato sul sistema. I flussi autenticati completi richiedono anche il database di test configurato in `.env`.
 
-Ultima verifica locale (24 ottobre 2026): typecheck, lint e 49 test automatici superati; schema Prisma valido. Le due migrazioni sono state eseguite realmente su PostgreSQL embedded (PGlite), inclusi i vincoli dell'onboarding. La pipeline GitHub della Fase 1 ha inoltre confermato build Linux, audit dipendenze e 4 test E2E.
+Ultima verifica locale (24 ottobre 2026): typecheck, lint e 55 test automatici superati; schema Prisma valido. Le tre migrazioni sono state eseguite realmente su PostgreSQL embedded (PGlite), inclusi i vincoli dell'onboarding e dell'import del piano dei conti. La pipeline GitHub conferma inoltre build Linux, audit dipendenze e test E2E.
 
 ## Principio operativo
 

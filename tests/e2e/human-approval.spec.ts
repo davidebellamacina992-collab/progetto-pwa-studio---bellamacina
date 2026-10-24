@@ -1,9 +1,11 @@
 import { expect, test } from "@playwright/test";
 
+const testOrigin = process.env.APP_BASE_URL ?? "http://localhost:" + (process.env.E2E_PORT ?? "3000");
+
 test("un endpoint protetto non consente approvazioni anonime", async ({ request }) => {
   const response = await request.post("/api/approvals/00000000-0000-4000-8000-000000000099/approve", {
     data: { confirmation: "APPROVO" },
-    headers: { Origin: process.env.APP_BASE_URL ?? "http://localhost:3000" }
+    headers: { Origin: testOrigin }
   });
   expect(response.status()).toBe(401);
 });

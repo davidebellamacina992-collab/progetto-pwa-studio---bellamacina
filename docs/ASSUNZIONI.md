@@ -23,7 +23,11 @@ Le assunzioni sono scelte prudenziali e sostituibili; non sono requisiti fiscali
 1. Operatori e amministratori possono compilare la bozza di onboarding; responsabili e commercialisti la consultano senza modificarla.
 2. Il regime contabile viene raccolto come testo dichiarato dall'azienda. Non e una regola fiscale applicativa e non alimenta calcoli finche non sara associato a una regola versionata e approvata.
 3. Il raggiungimento del 100% significa soltanto “pronta per la revisione”. La validazione professionale e l'attivazione restano passaggi distinti.
-4. Piano dei conti e saldi iniziali vengono per ora indicati come disponibili o mancanti; i relativi file non sono caricati dal wizard corrente.
+4. Piano dei conti e saldi iniziali vengono indicati nel wizard come disponibili o mancanti. Il piano dei conti si carica in una pagina separata; i saldi iniziali non sono ancora importabili.
+5. Il tracciato iniziale del piano dei conti e CSV UTF-8 con separatore virgola o punto e virgola. Codice e nome sono obbligatori; tipo e codice padre sono facoltativi.
+6. Il limite prudenziale e 2 MiB e 5.000 conti per file. Il file originale non viene conservato: sono persistiti hash, metadati minimi e righe validate.
+7. Due file con lo stesso contenuto non possono essere caricati due volte nella stessa azienda; lo stesso contenuto resta consentito in aziende diverse.
+8. Fino all'introduzione del gate dedicato, un import del piano dei conti resta tecnicamente e semanticamente una bozza non utilizzabile.
 
 ## Da validare prima della produzione
 

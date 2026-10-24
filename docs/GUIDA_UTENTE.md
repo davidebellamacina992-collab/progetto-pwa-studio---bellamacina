@@ -31,6 +31,14 @@ La bozza viene salvata automaticamente dopo le modifiche. Puoi interrompere e ri
 
 Operatori e amministratori possono compilare la bozza. Responsabili e commercialisti possono consultarla. Le valutazioni fiscali e civilistiche devono comunque essere validate dal commercialista.
 
+## Importare il piano dei conti
+
+Apri **Piano dei conti** e seleziona un file CSV codificato in UTF-8. Il file puo usare la virgola o il punto e virgola come separatore. Deve contenere le colonne **codice** e **nome**; puo inoltre contenere **tipo** e **codice_padre**.
+
+Il sistema controlla dimensione, intestazioni, righe, codici duplicati e gerarchia. Un codice padre deve comparire nello stesso file e non sono ammessi cicli. Un esempio interamente fittizio e disponibile in docs/esempi/piano-dei-conti-fittizio.csv.
+
+Il risultato compare nell'anteprima con stato **Bozza**. Non puo essere usato nelle registrazioni, approvato o finalizzato in questo incremento. Se lo stesso contenuto e gia presente per l'azienda attiva, il sistema blocca il duplicato.
+
 ## Creare una richiesta
 
 Nella Fase 1 la creazione di una scrittura dimostrativa e l'invio alla revisione sono disponibili tramite le API protette `/api/drafts` e `/api/drafts/{id}/request-approval`. L'interfaccia guidata per l'operatore viene introdotta con onboarding e anagrafiche nella Fase 2; non e simulata nella dashboard corrente.
@@ -64,5 +72,5 @@ Apri **Registro di audit** per cercare eventi per data, utente, azienda, azione 
 
 ## Moduli successivi
 
-Piano dei conti, anagrafiche, documenti, prima nota, banche, IVA, personale, cespiti, chiusure, bilancio e controllo di gestione saranno aggiunti negli incrementi successivi e useranno lo stesso flusso di approvazione.
+Approvazione e attivazione del piano dei conti, anagrafiche, documenti, prima nota, banche, IVA, personale, cespiti, chiusure, bilancio e controllo di gestione saranno aggiunti negli incrementi successivi e useranno lo stesso flusso di approvazione.
 

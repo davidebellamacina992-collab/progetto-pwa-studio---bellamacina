@@ -72,11 +72,23 @@
 
 **Motivazione:** garantisce continuita all'utente senza indebolire segregazione, tracciabilita o controllo dei ruoli.
 
+## D-013 - Import CSV validato prima della persistenza
+
+**Decisione:** accettare per il piano dei conti soltanto CSV UTF-8 fino a 2 MiB e 5.000 righe, con intestazioni esplicite, codici univoci e gerarchia priva di riferimenti mancanti o cicli.
+
+**Motivazione:** un file malformato non deve produrre dati parziali o ambigui. Parsing, validazione, persistenza e audit avvengono prima che la bozza sia mostrata all'utente.
+
+## D-014 - Import del piano dei conti bloccato in bozza
+
+**Decisione:** in questo incremento ogni import nasce come DRAFT e un vincolo del database impedisce qualunque altro stato. Non esiste ancora una API di approvazione o attivazione del piano.
+
+**Motivazione:** la sola presenza del file non equivale a validazione professionale. Il vincolo sara modificato soltanto insieme al futuro gate di revisione, approvazione esplicita e finalizzazione auditata.
+
 ## Registro di fase
 
 La Fase 1 stabilisce le fondamenta. Le decisioni su OCR, storage, coda e formati di export saranno finalizzate nelle fasi che introducono tali funzioni.
 
-La Fase 2 e iniziata con il profilo aziendale guidato. Piano dei conti, anagrafiche, import e gate di approvazione della configurazione restano incrementi successivi della stessa fase.
+La Fase 2 comprende ora il profilo aziendale guidato e l'import controllato del piano dei conti in bozza. Anagrafiche e gate di approvazione della configurazione restano incrementi successivi della stessa fase.
 
 ## Verifiche del 23 ottobre 2026
 

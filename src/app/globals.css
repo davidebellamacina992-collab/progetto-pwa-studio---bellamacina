@@ -208,10 +208,21 @@ thead th { color: var(--muted); font-size: .67rem; text-transform: uppercase; le
 .choiceGroup label { display: flex; align-items: center; gap: .4rem; }
 .formNotice { padding: .8rem 1rem; border-left: 3px solid var(--amber); background: var(--amber-bg); color: var(--ink) !important; font-size: .8rem; }
 .wizardActions { padding-top: 1rem; display: flex; justify-content: space-between; gap: .75rem; }
+.chartLayout { display: grid; grid-template-columns: minmax(300px, .75fr) minmax(0, 1.4fr); gap: 1.2rem; align-items: start; }
+.mutedText { color: var(--muted); font-size: .84rem; line-height: 1.55; }
+.uploadForm { margin-top: 1rem; display: grid; gap: 1rem; }
+.chartImportCard { border-bottom: 1px solid var(--line); }
+.chartImportCard:last-child { border-bottom: 0; }
+.chartImportCard summary { padding: 1rem .2rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; cursor: pointer; }
+.chartImportCard summary > span:first-child { display: grid; gap: .25rem; }
+.chartImportCard summary small { color: var(--muted); font-size: .7rem; }
+.hashLine { margin: 0 .2rem .8rem; color: var(--muted); font-size: .68rem; overflow-wrap: anywhere; }
+.hashLine code { color: inherit; }
 
 @media (max-width: 1020px) {
   .metricGrid { grid-template-columns: repeat(2, 1fr); }
   .detailGrid { grid-template-columns: 1fr; }
+  .chartLayout { grid-template-columns: 1fr; }
   .decisionCard { position: static; }
   .flowMini { display: none; }
   .loginPage { grid-template-columns: 1fr; }

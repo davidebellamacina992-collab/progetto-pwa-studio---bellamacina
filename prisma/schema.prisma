@@ -50,57 +50,92 @@ enum VatPeriodicity {
 }
 
 model User {
-  id           String       @id @default(uuid()) @db.Uuid
-  email        String       @unique
-  passwordHash String
-  displayName  String
-  active       Boolean      @default(true)
-  totpEnabled  Boolean      @default(false)
+  id                  String              @id @default(uuid()) @db.Uuid
+  email               String              @unique
+  passwordHash        String
+  displayName         String
+  active              Boolean             @default(true)
+  totpEnabled         Boolean             @default(false)
   totpSecretEncrypted String?
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-  memberships Membership[]
-  sessions     Session[]
-  requested    ApprovalRequest[] @relation("RequestedBy")
-  decisions    ApprovalDecision[]
-  auditEvents  AuditLog[]
-  drafts       AccountingDraft[] @relation("DraftCreatedBy")
-  onboardingUpdates CompanyOnboarding[] @relation("OnboardingUpdatedBy")
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  memberships         Membership[]
+  sessions            Session[]
+  requested           ApprovalRequest[]   @relation("RequestedBy")
+  decisions           ApprovalDecision[]
+  auditEvents         AuditLog[]
+  drafts              AccountingDraft[]   @relation("DraftCreatedBy")
+  onboardingUpdates   CompanyOnboarding[] @relation("OnboardingUpdatedBy")
+  chartImports        ChartImport[]       @relation("ChartImportCreatedBy")
 }
 
 model Company {
-  id                    String       @id @default(uuid()) @db.Uuid
-  name                  String
-  taxCode               String?
-  fourEyesRequired      Boolean      @default(false)
-  strongApprovalRequired Boolean     @default(true)
-  approverTotpRequired  Boolean      @default(true)
-  createdAt             DateTime     @default(now())
-  updatedAt             DateTime     @updatedAt
-  memberships           Membership[]
-  approvalRequests      ApprovalRequest[]
-  auditLogs             AuditLog[]
-  drafts                AccountingDraft[]
-  onboarding            CompanyOnboarding?
+  id                     String             @id @default(uuid()) @db.Uuid
+  name                   String
+  taxCode                String?
+  fourEyesRequired       Boolean            @default(false)
+  strongApprovalRequired Boolean            @default(true)
+  approverTotpRequired   Boolean            @default(true)
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+  memberships            Membership[]
+  approvalRequests       ApprovalRequest[]
+  auditLogs              AuditLog[]
+  drafts                 AccountingDraft[]
+  onboarding             CompanyOnboarding?
+  chartImports           ChartImport[]
+}
+
+model ChartImport {
+  id             String                  @id @default(uuid()) @db.Uuid
+  companyId      String                  @db.Uuid
+  sourceFileName String
+  fileHash       String
+  rowCount       Int
+  status         WorkStatus              @default(DRAFT)
+  version        Int                     @default(1)
+  createdById    String                  @db.Uuid
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+  company        Company                 @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  createdBy      User                    @relation("ChartImportCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  lines          ChartAccountDraftLine[]
+
+  @@unique([companyId, fileHash])
+  @@index([companyId, status])
+}
+
+model ChartAccountDraftLine {
+  id          String      @id @default(uuid()) @db.Uuid
+  importId    String      @db.Uuid
+  code        String      @db.VarChar(40)
+  name        String      @db.VarChar(200)
+  accountType String?     @db.VarChar(80)
+  parentCode  String?     @db.VarChar(40)
+  position    Int
+  chartImport ChartImport @relation(fields: [importId], references: [id], onDelete: Restrict)
+
+  @@unique([importId, code])
+  @@index([importId, position])
 }
 
 model CompanyOnboarding {
-  companyId              String           @id @db.Uuid
-  countryCode            String?          @db.VarChar(2)
-  legalForm              String?
-  accountingRegime       String?
-  vatPeriodicity         VatPeriodicity?
-  managementSoftware     String?
-  hasChartOfAccounts     Boolean?
-  hasOpeningBalances     Boolean?
-  currentStep            Int              @default(1)
-  status                 OnboardingStatus @default(IN_PROGRESS)
-  version                Int              @default(1)
-  updatedById            String           @db.Uuid
-  createdAt              DateTime         @default(now())
-  updatedAt              DateTime         @updatedAt
-  company                Company          @relation(fields: [companyId], references: [id], onDelete: Restrict)
-  updatedBy              User             @relation("OnboardingUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  companyId          String           @id @db.Uuid
+  countryCode        String?          @db.VarChar(2)
+  legalForm          String?
+  accountingRegime   String?
+  vatPeriodicity     VatPeriodicity?
+  managementSoftware String?
+  hasChartOfAccounts Boolean?
+  hasOpeningBalances Boolean?
+  currentStep        Int              @default(1)
+  status             OnboardingStatus @default(IN_PROGRESS)
+  version            Int              @default(1)
+  updatedById        String           @db.Uuid
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  company            Company          @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  updatedBy          User             @relation("OnboardingUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
 
   @@index([status])
 }
@@ -119,39 +154,39 @@ model Membership {
 }
 
 model Session {
-  id           String    @id @default(uuid()) @db.Uuid
-  tokenHash    String    @unique
-  userId       String    @db.Uuid
-  expiresAt    DateTime
-  lastSeenAt   DateTime  @default(now())
-  revokedAt    DateTime?
+  id            String    @id @default(uuid()) @db.Uuid
+  tokenHash     String    @unique
+  userId        String    @db.Uuid
+  expiresAt     DateTime
+  lastSeenAt    DateTime  @default(now())
+  revokedAt     DateTime?
   mfaVerifiedAt DateTime?
-  ipAddress    String?
-  userAgent    String?
-  createdAt    DateTime  @default(now())
-  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ipAddress     String?
+  userAgent     String?
+  createdAt     DateTime  @default(now())
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, expiresAt])
 }
 
 model AccountingDraft {
-  id              String       @id @default(uuid()) @db.Uuid
-  companyId       String       @db.Uuid
-  description     String
-  status          WorkStatus   @default(DRAFT)
-  version         Int          @default(1)
-  entryKind       EntryKind    @default(STANDARD)
-  adjustsEntryId  String?      @db.Uuid
-  createdById     String       @db.Uuid
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
-  finalizedAt     DateTime?
-  company         Company      @relation(fields: [companyId], references: [id], onDelete: Restrict)
-  createdBy       User         @relation("DraftCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  adjustsEntry    AccountingDraft? @relation("Adjustment", fields: [adjustsEntryId], references: [id], onDelete: Restrict)
-  adjustments     AccountingDraft[] @relation("Adjustment")
-  lines           AccountingLine[]
-  approvals       ApprovalRequest[]
+  id             String            @id @default(uuid()) @db.Uuid
+  companyId      String            @db.Uuid
+  description    String
+  status         WorkStatus        @default(DRAFT)
+  version        Int               @default(1)
+  entryKind      EntryKind         @default(STANDARD)
+  adjustsEntryId String?           @db.Uuid
+  createdById    String            @db.Uuid
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  finalizedAt    DateTime?
+  company        Company           @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  createdBy      User              @relation("DraftCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  adjustsEntry   AccountingDraft?  @relation("Adjustment", fields: [adjustsEntryId], references: [id], onDelete: Restrict)
+  adjustments    AccountingDraft[] @relation("Adjustment")
+  lines          AccountingLine[]
+  approvals      ApprovalRequest[]
 
   @@index([companyId, status])
 }
@@ -169,31 +204,31 @@ model AccountingLine {
 }
 
 model ApprovalRequest {
-  id                   String       @id @default(uuid()) @db.Uuid
-  companyId            String       @db.Uuid
-  draftId              String       @db.Uuid
-  objectType           String
-  objectVersion        Int
-  objectHash           String
-  status               WorkStatus   @default(PENDING_APPROVAL)
-  requestedById        String       @db.Uuid
-  requiresStrongConfirm Boolean     @default(true)
-  requiresSecondApproval Boolean    @default(false)
-  snapshot             Json
-  diff                 Json
-  anomalies            Json
-  rejectionReason      String?
-  createdAt            DateTime     @default(now())
-  updatedAt            DateTime     @updatedAt
-  approvedAt           DateTime?
-  finalizedAt          DateTime?
-  company              Company      @relation(fields: [companyId], references: [id], onDelete: Restrict)
-  draft                AccountingDraft @relation(fields: [draftId], references: [id], onDelete: Restrict)
-  requestedBy          User         @relation("RequestedBy", fields: [requestedById], references: [id], onDelete: Restrict)
-  decisions            ApprovalDecision[]
+  id                     String             @id @default(uuid()) @db.Uuid
+  companyId              String             @db.Uuid
+  draftId                String             @db.Uuid
+  objectType             String
+  objectVersion          Int
+  objectHash             String
+  status                 WorkStatus         @default(PENDING_APPROVAL)
+  requestedById          String             @db.Uuid
+  requiresStrongConfirm  Boolean            @default(true)
+  requiresSecondApproval Boolean            @default(false)
+  snapshot               Json
+  diff                   Json
+  anomalies              Json
+  rejectionReason        String?
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+  approvedAt             DateTime?
+  finalizedAt            DateTime?
+  company                Company            @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  draft                  AccountingDraft    @relation(fields: [draftId], references: [id], onDelete: Restrict)
+  requestedBy            User               @relation("RequestedBy", fields: [requestedById], references: [id], onDelete: Restrict)
+  decisions              ApprovalDecision[]
 
-  @@index([companyId, status])
   @@unique([draftId, objectVersion])
+  @@index([companyId, status])
 }
 
 model ApprovalDecision {
@@ -229,6 +264,6 @@ model AuditLog {
   company       Company  @relation(fields: [companyId], references: [id], onDelete: Restrict)
   actor         User?    @relation(fields: [actorId], references: [id], onDelete: Restrict)
 
-  @@index([companyId, createdAt])
   @@unique([companyId, entryHash])
+  @@index([companyId, createdAt])
 }

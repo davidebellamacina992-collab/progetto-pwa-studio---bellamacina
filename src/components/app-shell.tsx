@@ -7,6 +7,7 @@ import { LogoutButton } from "./logout-button";
 const navigation = [
   { href: "/", label: "Oggi", icon: "⌂" },
   { href: "/onboarding", label: "Configurazione", icon: "◇" },
+  { href: "/piano-dei-conti", label: "Piano dei conti", icon: "▦" },
   { href: "/approvazioni", label: "Approvazioni", icon: "✓" },
   { href: "/audit", label: "Registro attività", icon: "≡" },
   { href: "/sicurezza", label: "Sicurezza account", icon: "◈" },
