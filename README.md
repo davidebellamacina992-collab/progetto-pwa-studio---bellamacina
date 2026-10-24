@@ -18,7 +18,15 @@ La **Fase 1 - Fondamenta** realizza l'infrastruttura trasversale su cui poggeran
 - interfaccia italiana per dashboard, richieste e registro di audit;
 - test automatici dei divieti di bypass.
 
-I moduli contabili delle fasi 2-10 non sono ancora inclusi.
+La **Fase 2 è in corso**. È disponibile il primo incremento verificabile:
+
+- wizard di onboarding aziendale in cinque passaggi;
+- salvataggio automatico esclusivamente come bozza;
+- avanzamento visibile in dashboard;
+- segregazione per azienda, autorizzazione per ruolo e audit di ogni salvataggio;
+- stato `PRONTA_PER_REVISIONE` al completamento, senza attivazione o finalizzazione automatica.
+
+Piano dei conti, anagrafiche e importazione dati saranno i prossimi incrementi della Fase 2.
 
 ## Avvio in 5 minuti con Docker
 
@@ -72,7 +80,7 @@ npm run build
 
 I test E2E avviano l'app in modalita sviluppo e usano Google Chrome installato sul sistema. I flussi autenticati completi richiedono anche il database di test configurato in `.env`.
 
-Ultima verifica locale (23 ottobre 2026): typecheck, lint, 44 test automatici, 4 test E2E, schema Prisma e audit delle dipendenze di produzione superati. La migrazione e i trigger sono stati eseguiti realmente su PostgreSQL embedded (PGlite), e i servizi sono stati verificati contro accessi cross-tenant. L'host di lavoro non dispone di Docker; la build containerizzata deve quindi essere confermata dalla CI o su una macchina con Docker Desktop.
+Ultima verifica locale (24 ottobre 2026): typecheck, lint e 49 test automatici superati; schema Prisma valido. Le due migrazioni sono state eseguite realmente su PostgreSQL embedded (PGlite), inclusi i vincoli dell'onboarding. La pipeline GitHub della Fase 1 ha inoltre confermato build Linux, audit dipendenze e 4 test E2E.
 
 ## Principio operativo
 

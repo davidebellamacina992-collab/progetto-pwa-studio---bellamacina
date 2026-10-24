@@ -6,6 +6,7 @@ import { LogoutButton } from "./logout-button";
 
 const navigation = [
   { href: "/", label: "Oggi", icon: "⌂" },
+  { href: "/onboarding", label: "Configurazione", icon: "◇" },
   { href: "/approvazioni", label: "Approvazioni", icon: "✓" },
   { href: "/audit", label: "Registro attività", icon: "≡" },
   { href: "/sicurezza", label: "Sicurezza account", icon: "◈" },
@@ -48,14 +49,11 @@ export function AppShell({
               </Link>
             );
           })}
-          <span className="navItem disabled" aria-disabled="true">
-            <span className="navIcon" aria-hidden="true">▦</span>
-            Servizi <small>Fase successiva</small>
-          </span>
+          <span className="navItem disabled" aria-disabled="true"><span className="navIcon" aria-hidden="true">▦</span>Servizi <small>In preparazione</small></span>
         </nav>
         <div className="sidebarFooter">
           <CompanySwitcher />
-          <span className="textLink disabledText" aria-disabled="true">Impostazioni · Fase successiva</span>
+          <Link className="textLink" href="/onboarding">Profilo aziendale</Link>
         </div>
       </aside>
       <div className="pageColumn">

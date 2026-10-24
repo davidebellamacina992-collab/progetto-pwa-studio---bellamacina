@@ -38,6 +38,17 @@ enum EntryKind {
   ADJUSTMENT
 }
 
+enum OnboardingStatus {
+  IN_PROGRESS
+  READY_FOR_REVIEW
+}
+
+enum VatPeriodicity {
+  MONTHLY
+  QUARTERLY
+  NOT_APPLICABLE
+}
+
 model User {
   id           String       @id @default(uuid()) @db.Uuid
   email        String       @unique
@@ -54,6 +65,7 @@ model User {
   decisions    ApprovalDecision[]
   auditEvents  AuditLog[]
   drafts       AccountingDraft[] @relation("DraftCreatedBy")
+  onboardingUpdates CompanyOnboarding[] @relation("OnboardingUpdatedBy")
 }
 
 model Company {
@@ -69,6 +81,28 @@ model Company {
   approvalRequests      ApprovalRequest[]
   auditLogs             AuditLog[]
   drafts                AccountingDraft[]
+  onboarding            CompanyOnboarding?
+}
+
+model CompanyOnboarding {
+  companyId              String           @id @db.Uuid
+  countryCode            String?          @db.VarChar(2)
+  legalForm              String?
+  accountingRegime       String?
+  vatPeriodicity         VatPeriodicity?
+  managementSoftware     String?
+  hasChartOfAccounts     Boolean?
+  hasOpeningBalances     Boolean?
+  currentStep            Int              @default(1)
+  status                 OnboardingStatus @default(IN_PROGRESS)
+  version                Int              @default(1)
+  updatedById            String           @db.Uuid
+  createdAt              DateTime         @default(now())
+  updatedAt              DateTime         @updatedAt
+  company                Company          @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  updatedBy              User             @relation("OnboardingUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+
+  @@index([status])
 }
 
 model Membership {

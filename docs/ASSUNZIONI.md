@@ -18,6 +18,13 @@ Le assunzioni sono scelte prudenziali e sostituibili; non sono requisiti fiscali
 12. Il seed contiene soltanto societa e persone fittizie e non viene eseguito automaticamente in produzione.
 13. La MFA TOTP e obbligatoria per i responsabili per impostazione predefinita; ogni azienda puo disattivare il gate soltanto mediante configurazione amministrativa esplicita.
 
+## Fase 2
+
+1. Operatori e amministratori possono compilare la bozza di onboarding; responsabili e commercialisti la consultano senza modificarla.
+2. Il regime contabile viene raccolto come testo dichiarato dall'azienda. Non e una regola fiscale applicativa e non alimenta calcoli finche non sara associato a una regola versionata e approvata.
+3. Il raggiungimento del 100% significa soltanto “pronta per la revisione”. La validazione professionale e l'attivazione restano passaggi distinti.
+4. Piano dei conti e saldi iniziali vengono per ora indicati come disponibili o mancanti; i relativi file non sono caricati dal wizard corrente.
+
 ## Da validare prima della produzione
 
 - politica password e durata sessione;

@@ -1,4 +1,4 @@
-# Guida utente - Fase 1
+# Guida utente
 
 > Le valutazioni fiscali e civilistiche rilevanti devono essere validate dal commercialista.
 
@@ -22,6 +22,14 @@ Quando l'azienda richiede il secondo fattore per gli approvatori, un responsabil
 - **Responsabile/Supervisore:** revisiona, modifica, approva o respinge.
 - **Commercialista/Revisore:** consulta, commenta e valida gli aspetti professionali.
 - **Amministratore:** gestisce utenti e configurazioni; non puo alterare il registro di audit.
+
+## Configurazione iniziale
+
+Apri **Configurazione** e completa i cinque passaggi: dati aziendali, impostazione contabile dichiarata, software utilizzato, disponibilita del piano dei conti e dei saldi iniziali, riepilogo.
+
+La bozza viene salvata automaticamente dopo le modifiche. Puoi interrompere e riprendere dalla dashboard. Al 100% lo stato diventa **Pronta per la revisione**: non significa approvata e non attiva calcoli, esportazioni o adempimenti.
+
+Operatori e amministratori possono compilare la bozza. Responsabili e commercialisti possono consultarla. Le valutazioni fiscali e civilistiche devono comunque essere validate dal commercialista.
 
 ## Creare una richiesta
 
@@ -56,5 +64,5 @@ Apri **Registro di audit** per cercare eventi per data, utente, azienda, azione 
 
 ## Moduli successivi
 
-Onboarding, anagrafiche, documenti, prima nota, banche, IVA, personale, cespiti, chiusure, bilancio e controllo di gestione saranno aggiunti nelle fasi successive e useranno lo stesso flusso di approvazione.
+Piano dei conti, anagrafiche, documenti, prima nota, banche, IVA, personale, cespiti, chiusure, bilancio e controllo di gestione saranno aggiunti negli incrementi successivi e useranno lo stesso flusso di approvazione.
 

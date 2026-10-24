@@ -60,9 +60,23 @@
 
 **Motivazione:** gli approvatori necessitano di un fattore indipendente dalla password, ma l'app non deve trasmettere dati o dipendere da servizi esterni. Il gate viene applicato lato server a approvazione, rifiuto e finalizzazione.
 
+## D-011 - Onboarding separato dall'attivazione fiscale
+
+**Decisione:** il wizard salva dati dichiarati dall'utente in una bozza aziendale versionata. Il completamento produce soltanto lo stato `READY_FOR_REVIEW`; non attiva regole fiscali e non finalizza la configurazione.
+
+**Motivazione:** regime e periodicita devono essere verificati prima di guidare calcoli o adempimenti. La separazione impedisce che il semplice completamento di un modulo venga interpretato come validazione professionale.
+
+## D-012 - Salvataggio automatico auditato
+
+**Decisione:** ogni autosalvataggio dell'onboarding passa da un Route Handler protetto, usa l'azienda ricavata dalla sessione, incrementa la versione e aggiunge l'evento di audit nella stessa transazione.
+
+**Motivazione:** garantisce continuita all'utente senza indebolire segregazione, tracciabilita o controllo dei ruoli.
+
 ## Registro di fase
 
 La Fase 1 stabilisce le fondamenta. Le decisioni su OCR, storage, coda e formati di export saranno finalizzate nelle fasi che introducono tali funzioni.
+
+La Fase 2 e iniziata con il profilo aziendale guidato. Piano dei conti, anagrafiche, import e gate di approvazione della configurazione restano incrementi successivi della stessa fase.
 
 ## Verifiche del 23 ottobre 2026
 

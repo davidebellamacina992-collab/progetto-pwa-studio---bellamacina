@@ -3,9 +3,13 @@ import { AppShell } from "@/components/app-shell";
 import { EmptyState } from "@/components/empty-state";
 import { StatusBadge } from "@/components/status-badge";
 import { requirePageSession } from "@/lib/page-auth";
+import { db } from "@/lib/db";
+import { onboardingProgress } from "@/lib/onboarding";
 
 export default async function DashboardPage() {
-  await requirePageSession();
+  const context = await requirePageSession();
+  const onboarding = await db.companyOnboarding.findUnique({ where: { companyId: context.companyId } });
+  const setupProgress = onboarding ? onboardingProgress(onboarding) : 0;
   return (
     <AppShell currentPath="/">
       <div className="pageHeading">
@@ -58,13 +62,11 @@ export default async function DashboardPage() {
           <span className="eyebrow">Configurazione iniziale</span>
           <h2 id="setup-title">Completa il profilo aziendale</h2>
           <p>Inserisci regime, periodicità IVA e piano dei conti prima di usare i moduli contabili.</p>
-          <div className="progressTrack" aria-label="Avanzamento: non ancora iniziato">
-            <span style={{ width: "0%" }} />
+          <div className="progressTrack" aria-label={`Avanzamento: ${setupProgress}%`}>
+            <span style={{ width: `${setupProgress}%` }} />
           </div>
-          <div className="progressLabel"><span>Non iniziato</span><strong>0%</strong></div>
-          <span className="button secondary full disabledButton" aria-disabled="true">
-            Configurazione · Fase successiva
-          </span>
+          <div className="progressLabel"><span>{setupProgress === 100 ? "Pronta per la revisione" : setupProgress > 0 ? "In corso" : "Non iniziato"}</span><strong>{setupProgress}%</strong></div>
+          <Link className="button secondary full" href="/onboarding">{setupProgress > 0 ? "Continua configurazione" : "Inizia configurazione"}</Link>
         </aside>
       </div>
 
