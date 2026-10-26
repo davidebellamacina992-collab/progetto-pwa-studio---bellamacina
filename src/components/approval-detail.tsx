@@ -67,10 +67,17 @@ export function ApprovalDetailView({ id }: { id: string }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ reason: reason.trim() || undefined, confirmation }),
       });
-      const payload = (await response.json().catch(() => null)) as { message?: string } | null;
+      const payload = (await response.json().catch(() => null)) as { message?: string; status?: string } | null;
       if (!response.ok) throw new Error(payload?.message ?? "La decisione non è stata registrata.");
       setResult(payload?.message ?? (decision === "approve" ? "Approvazione registrata." : decision === "finalize" ? "Finalizzazione registrata." : "Rifiuto registrato."));
-      setData({ ...data, status: decision === "finalize" ? "FINALIZZATO" : decision === "reject" ? "RESPINTO" : "APPROVATO" });
+      const nextStatus = payload?.status === "PARTIALLY_APPROVED"
+        ? "DA_APPROVARE"
+        : decision === "finalize"
+          ? "FINALIZZATO"
+          : decision === "reject"
+            ? "RESPINTO"
+            : "APPROVATO";
+      setData({ ...data, status: nextStatus });
       setDecision(null);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Operazione non riuscita.");

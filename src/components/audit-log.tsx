@@ -23,6 +23,8 @@ function eventLabel(value: string) {
     APPROVAL_COMPLETED: "Approvazione completata",
     APPROVAL_REJECTED: "Richiesta respinta",
     ACCOUNTING_DRAFT_FINALIZED: "Bozza finalizzata",
+    CHART_IMPORT_APPROVAL_REQUESTED: "Piano dei conti inviato alla revisione",
+    CHART_IMPORT_FINALIZED: "Piano dei conti finalizzato",
   };
   return labels[value] ?? value.replaceAll("_", " ").toLocaleLowerCase("it-IT");
 }

@@ -31,6 +31,30 @@ function snapshotDraft(draft: {
   };
 }
 
+function snapshotChartImport(chartImport: {
+  id: string;
+  sourceFileName: string;
+  fileHash: string;
+  rowCount: number;
+  version: number;
+  lines: Array<{ code: string; name: string; accountType: string | null; parentCode: string | null; position: number }>;
+}) {
+  return {
+    id: chartImport.id,
+    sourceFileName: chartImport.sourceFileName,
+    fileHash: chartImport.fileHash,
+    rowCount: chartImport.rowCount,
+    version: chartImport.version,
+    lines: chartImport.lines.map((line) => ({
+      code: line.code,
+      name: line.name,
+      accountType: line.accountType,
+      parentCode: line.parentCode,
+      position: line.position
+    }))
+  };
+}
+
 function assertBalanced(lines: Array<{ debitCents: bigint; creditCents: bigint }>) {
   const debit = lines.reduce((sum, line) => sum + line.debitCents, 0n);
   const credit = lines.reduce((sum, line) => sum + line.creditCents, 0n);
@@ -89,6 +113,66 @@ export async function requestDraftApproval(context: SessionContext, draftId: str
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 }
 
+export async function requestChartImportApproval(
+  context: SessionContext,
+  chartImportId: string,
+  ipAddress?: string | null
+) {
+  assertRole(context, [Role.OPERATOR, Role.ADMIN]);
+  return db.$transaction(async (tx) => {
+    const chartImport = await tx.chartImport.findFirst({
+      where: { id: chartImportId, companyId: context.companyId },
+      include: { lines: { orderBy: { position: "asc" } }, company: true }
+    });
+    if (!chartImport) throw new AppError("NOT_FOUND", "Importazione non trovata.", 404);
+    if (chartImport.status !== WorkStatus.DRAFT) {
+      throw new AppError("INVALID_STATE", "Il piano dei conti e gia in revisione o finalizzato.", 409);
+    }
+    if (chartImport.lines.length !== chartImport.rowCount || chartImport.lines.length === 0) {
+      throw new AppError("INCOMPLETE_IMPORT", "Le righe del piano dei conti non corrispondono al riepilogo importato.", 409);
+    }
+    const snapshot = snapshotChartImport(chartImport);
+    const hash = objectHash(snapshot);
+    const approval = await tx.approvalRequest.create({
+      data: {
+        companyId: context.companyId,
+        chartImportId: chartImport.id,
+        objectType: "CHART_IMPORT",
+        objectVersion: chartImport.version,
+        objectHash: hash,
+        requestedById: context.userId,
+        requiresStrongConfirm: chartImport.company.strongApprovalRequired,
+        requiresSecondApproval: chartImport.company.fourEyesRequired,
+        snapshot: json(snapshot),
+        diff: json({ from: chartImport.status, to: WorkStatus.PENDING_APPROVAL }),
+        anomalies: json([])
+      }
+    });
+    const changed = await tx.chartImport.updateMany({
+      where: {
+        id: chartImport.id,
+        companyId: context.companyId,
+        version: chartImport.version,
+        status: chartImport.status
+      },
+      data: { status: WorkStatus.PENDING_APPROVAL }
+    });
+    if (changed.count !== 1) throw new AppError("CONCURRENT_UPDATE", "Il piano dei conti e cambiato: ricarica la pagina.", 409);
+    await appendAudit(tx, {
+      companyId: context.companyId,
+      actorId: context.userId,
+      eventType: "CHART_IMPORT_APPROVAL_REQUESTED",
+      entityType: "ApprovalRequest",
+      entityId: approval.id,
+      beforeValue: json({ status: chartImport.status }),
+      afterValue: json({ status: WorkStatus.PENDING_APPROVAL, objectHash: hash }),
+      ipAddress,
+      correlationId: randomUUID()
+    });
+    return approval;
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+}
+
 export async function approveRequest(
   context: SessionContext,
   approvalId: string,
@@ -99,11 +183,19 @@ export async function approveRequest(
   return db.$transaction(async (tx) => {
     const approval = await tx.approvalRequest.findFirst({
       where: { id: approvalId, companyId: context.companyId },
-      include: { decisions: true, draft: { include: { lines: true } } }
+      include: {
+        decisions: true,
+        draft: { include: { lines: true } },
+        chartImport: { include: { lines: { orderBy: { position: "asc" } } } }
+      }
     });
     if (!approval) throw new AppError("NOT_FOUND", "Richiesta non trovata.", 404);
-    const currentSnapshot = snapshotDraft(approval.draft);
-    if (approval.draft.version !== approval.objectVersion || objectHash(currentSnapshot) !== approval.objectHash) {
+    const target = approval.objectType === "CHART_IMPORT" ? approval.chartImport : approval.draft;
+    if (!target) throw new AppError("INVALID_APPROVAL_TARGET", "La richiesta non ha un oggetto valido.", 409);
+    const currentSnapshot = approval.objectType === "CHART_IMPORT"
+      ? snapshotChartImport(approval.chartImport!)
+      : snapshotDraft(approval.draft!);
+    if (target.version !== approval.objectVersion || objectHash(currentSnapshot) !== approval.objectHash) {
       throw new AppError("STALE_APPROVAL", "La bozza e cambiata: occorre una nuova revisione.", 409);
     }
     const nextStatus = nextApprovalStatus({
@@ -130,10 +222,21 @@ export async function approveRequest(
       data: { status: nextStatus, approvedAt: nextStatus === WorkStatus.APPROVED ? new Date() : null }
     });
     if (changed.count !== 1) throw new AppError("CONCURRENT_UPDATE", "La richiesta e stata gia elaborata.", 409);
-    await tx.accountingDraft.updateMany({
-      where: { id: approval.draftId, companyId: context.companyId, version: approval.objectVersion },
-      data: { status: nextStatus }
-    });
+    let targetChanged: { count: number };
+    if (approval.objectType === "CHART_IMPORT" && approval.chartImportId) {
+      targetChanged = await tx.chartImport.updateMany({
+        where: { id: approval.chartImportId, companyId: context.companyId, version: approval.objectVersion },
+        data: { status: nextStatus }
+      });
+    } else if (approval.draftId) {
+      targetChanged = await tx.accountingDraft.updateMany({
+        where: { id: approval.draftId, companyId: context.companyId, version: approval.objectVersion },
+        data: { status: nextStatus }
+      });
+    } else {
+      throw new AppError("INVALID_APPROVAL_TARGET", "La richiesta non ha un oggetto valido.", 409);
+    }
+    if (targetChanged.count !== 1) throw new AppError("CONCURRENT_UPDATE", "L'oggetto in revisione e cambiato.", 409);
     await appendAudit(tx, {
       companyId: context.companyId,
       actorId: context.userId,
@@ -173,7 +276,21 @@ export async function rejectRequest(
       data: { approvalRequestId: approval.id, actorId: context.userId, decision: "REJECT", reason: reason.trim(), observedHash: approval.objectHash, ipAddress }
     });
     await tx.approvalRequest.update({ where: { id: approval.id }, data: { status: WorkStatus.REJECTED, rejectionReason: reason.trim() } });
-    await tx.accountingDraft.updateMany({ where: { id: approval.draftId, companyId: context.companyId }, data: { status: WorkStatus.REJECTED } });
+    let targetChanged: { count: number };
+    if (approval.objectType === "CHART_IMPORT" && approval.chartImportId) {
+      targetChanged = await tx.chartImport.updateMany({
+        where: { id: approval.chartImportId, companyId: context.companyId },
+        data: { status: WorkStatus.REJECTED }
+      });
+    } else if (approval.draftId) {
+      targetChanged = await tx.accountingDraft.updateMany({
+        where: { id: approval.draftId, companyId: context.companyId },
+        data: { status: WorkStatus.REJECTED }
+      });
+    } else {
+      throw new AppError("INVALID_APPROVAL_TARGET", "La richiesta non ha un oggetto valido.", 409);
+    }
+    if (targetChanged.count !== 1) throw new AppError("CONCURRENT_UPDATE", "L'oggetto in revisione e cambiato.", 409);
     await appendAudit(tx, {
       companyId: context.companyId,
       actorId: context.userId,
@@ -198,28 +315,64 @@ export async function finalizeRequest(
   return db.$transaction(async (tx) => {
     const approval = await tx.approvalRequest.findFirst({
       where: { id: approvalId, companyId: context.companyId },
-      include: { draft: { include: { lines: true } } }
+      include: {
+        draft: { include: { lines: true } },
+        chartImport: { include: { lines: { orderBy: { position: "asc" } } } }
+      }
     });
     if (!approval) throw new AppError("NOT_FOUND", "Richiesta non trovata.", 404);
     assertCanFinalize(approval.status, context.role, confirmation);
-    const currentSnapshot = snapshotDraft(approval.draft);
-    if (approval.draft.version !== approval.objectVersion || objectHash(currentSnapshot) !== approval.objectHash) {
+    const target = approval.objectType === "CHART_IMPORT" ? approval.chartImport : approval.draft;
+    if (!target) throw new AppError("INVALID_APPROVAL_TARGET", "La richiesta non ha un oggetto valido.", 409);
+    const currentSnapshot = approval.objectType === "CHART_IMPORT"
+      ? snapshotChartImport(approval.chartImport!)
+      : snapshotDraft(approval.draft!);
+    if (target.version !== approval.objectVersion || objectHash(currentSnapshot) !== approval.objectHash) {
       throw new AppError("STALE_APPROVAL", "L'approvazione non corrisponde piu alla bozza corrente.", 409);
     }
-    assertBalanced(approval.draft.lines);
     const now = new Date();
-    const changed = await tx.accountingDraft.updateMany({
-      where: { id: approval.draftId, companyId: context.companyId, version: approval.objectVersion, status: WorkStatus.APPROVED },
-      data: { status: WorkStatus.FINALIZED, finalizedAt: now }
-    });
+    let changed: { count: number };
+    let entityType: string;
+    let entityId: string;
+    let eventType: string;
+    if (approval.objectType === "CHART_IMPORT" && approval.chartImportId && approval.chartImport) {
+      changed = await tx.chartImport.updateMany({
+        where: {
+          id: approval.chartImportId,
+          companyId: context.companyId,
+          version: approval.objectVersion,
+          status: WorkStatus.APPROVED
+        },
+        data: { status: WorkStatus.FINALIZED, finalizedAt: now }
+      });
+      entityType = "ChartImport";
+      entityId = approval.chartImportId;
+      eventType = "CHART_IMPORT_FINALIZED";
+    } else if (approval.draftId && approval.draft) {
+      assertBalanced(approval.draft.lines);
+      changed = await tx.accountingDraft.updateMany({
+        where: {
+          id: approval.draftId,
+          companyId: context.companyId,
+          version: approval.objectVersion,
+          status: WorkStatus.APPROVED
+        },
+        data: { status: WorkStatus.FINALIZED, finalizedAt: now }
+      });
+      entityType = "AccountingDraft";
+      entityId = approval.draftId;
+      eventType = "ACCOUNTING_DRAFT_FINALIZED";
+    } else {
+      throw new AppError("INVALID_APPROVAL_TARGET", "La richiesta non ha un oggetto valido.", 409);
+    }
     if (changed.count !== 1) throw new AppError("CONCURRENT_UPDATE", "La registrazione non puo essere finalizzata nello stato corrente.", 409);
     await tx.approvalRequest.update({ where: { id: approval.id }, data: { status: WorkStatus.FINALIZED, finalizedAt: now } });
     await appendAudit(tx, {
       companyId: context.companyId,
       actorId: context.userId,
-      eventType: "ACCOUNTING_DRAFT_FINALIZED",
-      entityType: "AccountingDraft",
-      entityId: approval.draftId,
+      eventType,
+      entityType,
+      entityId,
       beforeValue: json({ status: WorkStatus.APPROVED }),
       afterValue: json({ status: WorkStatus.FINALIZED, objectHash: approval.objectHash }),
       ipAddress,

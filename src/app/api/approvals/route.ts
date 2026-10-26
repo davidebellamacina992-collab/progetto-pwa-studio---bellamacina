@@ -18,13 +18,19 @@ export async function GET(request: Request) {
     const statuses = filter === "DA_APPROVARE" ? [WorkStatus.PENDING_APPROVAL, WorkStatus.PARTIALLY_APPROVED] : undefined;
     const approvals = await db.approvalRequest.findMany({
       where: { companyId: context.companyId, status: statuses ? { in: statuses } : undefined },
-      include: { requestedBy: { select: { displayName: true } }, draft: { select: { description: true } } },
+      include: {
+        requestedBy: { select: { displayName: true } },
+        draft: { select: { description: true } },
+        chartImport: { select: { sourceFileName: true } }
+      },
       orderBy: { createdAt: "desc" }, take: 100
     });
     return Response.json({ items: approvals.map((item) => ({
       id: item.id,
-      title: item.draft.description,
-      objectType: "Scrittura contabile",
+      title: item.objectType === "CHART_IMPORT"
+        ? "Piano dei conti · " + (item.chartImport?.sourceFileName ?? "Importazione")
+        : (item.draft?.description ?? "Scrittura contabile"),
+      objectType: item.objectType === "CHART_IMPORT" ? "Piano dei conti" : "Scrittura contabile",
       requestedBy: item.requestedBy.displayName,
       requestedAt: item.createdAt.toISOString(),
       riskLevel: item.requiresSecondApproval ? "ALTO" : "MEDIO",

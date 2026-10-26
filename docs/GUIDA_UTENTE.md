@@ -37,7 +37,13 @@ Apri **Piano dei conti** e seleziona un file CSV codificato in UTF-8. Il file pu
 
 Il sistema controlla dimensione, intestazioni, righe, codici duplicati e gerarchia. Un codice padre deve comparire nello stesso file e non sono ammessi cicli. Un esempio interamente fittizio e disponibile in docs/esempi/piano-dei-conti-fittizio.csv.
 
-Il risultato compare nell'anteprima con stato **Bozza**. Non puo essere usato nelle registrazioni, approvato o finalizzato in questo incremento. Se lo stesso contenuto e gia presente per l'azienda attiva, il sistema blocca il duplicato.
+Il risultato compare nell'anteprima con stato **Bozza**. Se lo stesso contenuto e gia presente per l'azienda attiva, il sistema blocca il duplicato.
+
+Un operatore o amministratore puo selezionare **Invia alla revisione**. Il piano compare nella coda **Approvazioni**: un responsabile verifica riepilogo e anteprima, quindi approva oppure respinge con motivazione. Si applicano MFA, conferma forte e, quando configurato, principio dei quattro occhi.
+
+Se il piano viene respinto, correggi il CSV e caricalo come nuova bozza. La richiesta respinta resta invariata nel registro.
+
+Dopo l'approvazione il responsabile deve eseguire separatamente la finalizzazione digitando **FINALIZZO**. Solo allora il piano diventa immutabile. La finalizzazione non lo collega ancora automaticamente alle registrazioni contabili.
 
 ## Creare una richiesta
 
@@ -72,5 +78,5 @@ Apri **Registro di audit** per cercare eventi per data, utente, azienda, azione 
 
 ## Moduli successivi
 
-Approvazione e attivazione del piano dei conti, anagrafiche, documenti, prima nota, banche, IVA, personale, cespiti, chiusure, bilancio e controllo di gestione saranno aggiunti negli incrementi successivi e useranno lo stesso flusso di approvazione.
+Selezione del piano operativo, anagrafiche, documenti, prima nota, banche, IVA, personale, cespiti, chiusure, bilancio e controllo di gestione saranno aggiunti negli incrementi successivi e useranno lo stesso flusso di approvazione.
 

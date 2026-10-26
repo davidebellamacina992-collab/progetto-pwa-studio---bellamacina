@@ -27,7 +27,9 @@ Le assunzioni sono scelte prudenziali e sostituibili; non sono requisiti fiscali
 5. Il tracciato iniziale del piano dei conti e CSV UTF-8 con separatore virgola o punto e virgola. Codice e nome sono obbligatori; tipo e codice padre sono facoltativi.
 6. Il limite prudenziale e 2 MiB e 5.000 conti per file. Il file originale non viene conservato: sono persistiti hash, metadati minimi e righe validate.
 7. Due file con lo stesso contenuto non possono essere caricati due volte nella stessa azienda; lo stesso contenuto resta consentito in aziende diverse.
-8. Fino all'introduzione del gate dedicato, un import del piano dei conti resta tecnicamente e semanticamente una bozza non utilizzabile.
+8. Un import del piano dei conti resta non utilizzabile durante bozza, revisione e approvazione. La finalizzazione richiede un'azione separata del responsabile e lo rende immutabile.
+9. In questa fase possono esistere piu piani finalizzati per la stessa azienda, ma nessun modulo contabile li usa ancora come piano attivo. La selezione della versione operativa sara introdotta insieme alle registrazioni.
+10. Un piano respinto non viene riaperto: l'operatore corregge il file e crea una nuova bozza, preservando integralmente richiesta e decisione precedenti.
 
 ## Da validare prima della produzione
 

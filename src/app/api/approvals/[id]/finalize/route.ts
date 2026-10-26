@@ -16,7 +16,7 @@ export async function POST(request: Request, routeContext: { params: Promise<{ i
     const { id } = await routeContext.params;
     const { confirmation } = schema.parse(await request.json());
     const result = await finalizeRequest(context, id, confirmation, requestIp(request.headers));
-    return Response.json({ ...result, message: "Registrazione finalizzata e resa immutabile." });
+    return Response.json({ ...result, message: "Operazione finalizzata e resa immutabile." });
   } catch (error) {
     return errorResponse(error);
   }

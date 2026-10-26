@@ -11,7 +11,20 @@ function uiStatus(status: WorkStatus) {
   return "BOZZA";
 }
 
-type Snapshot = { description?: string; lines?: Array<{ accountCode: string; description: string; debitCents: string; creditCents: string }> };
+type Snapshot = {
+  description?: string;
+  sourceFileName?: string;
+  rowCount?: number;
+  fileHash?: string;
+  lines?: Array<{
+    accountCode?: string;
+    code?: string;
+    description?: string;
+    name?: string;
+    debitCents?: string;
+    creditCents?: string;
+  }>;
+};
 type Anomaly = { severity?: string; message?: string };
 
 export async function GET(_request: Request, routeContext: { params: Promise<{ id: string }> }) {
@@ -20,7 +33,11 @@ export async function GET(_request: Request, routeContext: { params: Promise<{ i
     const { id } = await routeContext.params;
     const item = await db.approvalRequest.findFirst({
       where: { id, companyId: context.companyId },
-      include: { requestedBy: { select: { displayName: true } }, draft: { select: { description: true } } }
+      include: {
+        requestedBy: { select: { displayName: true } },
+        draft: { select: { description: true } },
+        chartImport: { select: { sourceFileName: true } }
+      }
     });
     if (!item) throw new AppError("NOT_FOUND", "Richiesta non trovata.", 404);
     const snapshot = item.snapshot as Snapshot;
@@ -30,11 +47,19 @@ export async function GET(_request: Request, routeContext: { params: Promise<{ i
       message: anomaly.message ?? "Anomalia senza descrizione"
     }));
     const lineSummary = snapshot.lines?.map((line) => `${line.accountCode} · D ${line.debitCents} / A ${line.creditCents}`).join("; ") ?? null;
+    const isChartImport = item.objectType === "CHART_IMPORT";
+    const chartLineSummary = snapshot.lines?.slice(0, 20)
+      .map((line) => (line.code ?? "—") + " · " + (line.name ?? "—"))
+      .join("; ") ?? null;
     return Response.json({
       id: item.id,
-      title: item.draft.description,
-      description: "La bozza sara approvata; la finalizzazione resta un passaggio separato e tracciato.",
-      objectType: "Scrittura contabile",
+      title: isChartImport
+        ? "Piano dei conti · " + (item.chartImport?.sourceFileName ?? snapshot.sourceFileName ?? "Importazione")
+        : (item.draft?.description ?? snapshot.description ?? "Scrittura contabile"),
+      description: isChartImport
+        ? "L'importazione sara revisionata; la finalizzazione immutabile resta un passaggio separato e tracciato."
+        : "La bozza sara approvata; la finalizzazione resta un passaggio separato e tracciato.",
+      objectType: isChartImport ? "Piano dei conti" : "Scrittura contabile",
       status: uiStatus(item.status),
       requestedBy: item.requestedBy.displayName,
       requestedAt: item.createdAt.toISOString(),
@@ -43,7 +68,13 @@ export async function GET(_request: Request, routeContext: { params: Promise<{ i
       requiresSecondApproval: item.requiresSecondApproval,
       changes: [
         { field: "Stato", before: "Bozza", after: uiStatus(item.status) },
-        { field: "Righe contabili (importi in centesimi)", before: null, after: lineSummary }
+        {
+          field: isChartImport ? "Conti importati" : "Righe contabili (importi in centesimi)",
+          before: null,
+          after: isChartImport && snapshot.rowCount
+            ? snapshot.rowCount + " righe · " + chartLineSummary
+            : lineSummary
+        }
       ],
       anomalies
     });

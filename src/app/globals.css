@@ -218,6 +218,7 @@ thead th { color: var(--muted); font-size: .67rem; text-transform: uppercase; le
 .chartImportCard summary small { color: var(--muted); font-size: .7rem; }
 .hashLine { margin: 0 .2rem .8rem; color: var(--muted); font-size: .68rem; overflow-wrap: anywhere; }
 .hashLine code { color: inherit; }
+.chartImportActions { padding: 0 .2rem 1rem; display: flex; flex-wrap: wrap; gap: .6rem; }
 
 @media (max-width: 1020px) {
   .metricGrid { grid-template-columns: repeat(2, 1fr); }

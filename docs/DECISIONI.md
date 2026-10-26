@@ -78,17 +78,23 @@
 
 **Motivazione:** un file malformato non deve produrre dati parziali o ambigui. Parsing, validazione, persistenza e audit avvengono prima che la bozza sia mostrata all'utente.
 
-## D-014 - Import del piano dei conti bloccato in bozza
+## D-014 - Import del piano dei conti nasce in bozza
 
-**Decisione:** in questo incremento ogni import nasce come DRAFT e un vincolo del database impedisce qualunque altro stato. Non esiste ancora una API di approvazione o attivazione del piano.
+**Decisione:** ogni import nasce come DRAFT e non puo saltare direttamente a uno stato approvato o finalizzato. Le transizioni successive passano esclusivamente dal gate umano.
 
-**Motivazione:** la sola presenza del file non equivale a validazione professionale. Il vincolo sara modificato soltanto insieme al futuro gate di revisione, approvazione esplicita e finalizzazione auditata.
+**Motivazione:** la sola presenza del file non equivale a validazione professionale. Revisione, approvazione esplicita e finalizzazione auditata restano passaggi distinti.
+
+## D-015 - Motore di approvazione polimorfico con riferimento esclusivo
+
+**Decisione:** estendere la richiesta di approvazione al piano dei conti senza duplicare il motore. Ogni richiesta deve riferirsi a una sola scrittura oppure a una sola importazione, vincolo verificato dal database.
+
+**Motivazione:** conferma forte, quattro occhi, MFA, respinta motivata e audit devono conservare lo stesso significato in tutti i moduli. Le transizioni del piano dei conti e la sua immutabilita dopo la finalizzazione sono protette anche da trigger PostgreSQL.
 
 ## Registro di fase
 
 La Fase 1 stabilisce le fondamenta. Le decisioni su OCR, storage, coda e formati di export saranno finalizzate nelle fasi che introducono tali funzioni.
 
-La Fase 2 comprende ora il profilo aziendale guidato e l'import controllato del piano dei conti in bozza. Anagrafiche e gate di approvazione della configurazione restano incrementi successivi della stessa fase.
+La Fase 2 comprende ora il profilo aziendale guidato e l'import controllato del piano dei conti fino alla finalizzazione umana. Anagrafiche e saldi iniziali restano incrementi successivi della stessa fase.
 
 ## Verifiche del 23 ottobre 2026
 

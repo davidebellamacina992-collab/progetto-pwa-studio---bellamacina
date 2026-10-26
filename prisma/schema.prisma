@@ -97,9 +97,11 @@ model ChartImport {
   createdById    String                  @db.Uuid
   createdAt      DateTime                @default(now())
   updatedAt      DateTime                @updatedAt
+  finalizedAt    DateTime?
   company        Company                 @relation(fields: [companyId], references: [id], onDelete: Restrict)
   createdBy      User                    @relation("ChartImportCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
   lines          ChartAccountDraftLine[]
+  approvals      ApprovalRequest[]
 
   @@unique([companyId, fileHash])
   @@index([companyId, status])
@@ -206,7 +208,8 @@ model AccountingLine {
 model ApprovalRequest {
   id                     String             @id @default(uuid()) @db.Uuid
   companyId              String             @db.Uuid
-  draftId                String             @db.Uuid
+  draftId                String?            @db.Uuid
+  chartImportId          String?            @db.Uuid
   objectType             String
   objectVersion          Int
   objectHash             String
@@ -223,11 +226,13 @@ model ApprovalRequest {
   approvedAt             DateTime?
   finalizedAt            DateTime?
   company                Company            @relation(fields: [companyId], references: [id], onDelete: Restrict)
-  draft                  AccountingDraft    @relation(fields: [draftId], references: [id], onDelete: Restrict)
+  draft                  AccountingDraft?   @relation(fields: [draftId], references: [id], onDelete: Restrict)
+  chartImport            ChartImport?       @relation(fields: [chartImportId], references: [id], onDelete: Restrict)
   requestedBy            User               @relation("RequestedBy", fields: [requestedById], references: [id], onDelete: Restrict)
   decisions              ApprovalDecision[]
 
   @@unique([draftId, objectVersion])
+  @@unique([chartImportId, objectVersion])
   @@index([companyId, status])
 }
 

@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { StatusBadge } from "./status-badge";
 
 export type ChartImportView = {
@@ -11,6 +12,7 @@ export type ChartImportView = {
   rowCount: number;
   status: string;
   createdAt: string;
+  approvalId: string | null;
   lines: Array<{
     id: string;
     code: string;
@@ -33,6 +35,7 @@ export function ChartImporter({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [reviewingId, setReviewingId] = useState("");
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -57,6 +60,33 @@ export function ChartImporter({
     } finally {
       setBusy(false);
     }
+  }
+
+  async function requestReview(id: string) {
+    setReviewingId(id);
+    setError("");
+    setSuccess("");
+    try {
+      const response = await fetch("/api/chart-imports/" + encodeURIComponent(id) + "/request-approval", {
+        method: "POST"
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.message ?? "Invio alla revisione non riuscito.");
+      setSuccess("Piano dei conti inviato alla revisione umana.");
+      router.refresh();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Invio alla revisione non riuscito.");
+    } finally {
+      setReviewingId("");
+    }
+  }
+
+  function statusView(status: string) {
+    if (status === "PENDING_APPROVAL" || status === "PARTIALLY_APPROVED") return { label: "Da approvare", tone: "warning" as const };
+    if (status === "APPROVED") return { label: "Approvato", tone: "info" as const };
+    if (status === "REJECTED") return { label: "Respinto", tone: "danger" as const };
+    if (status === "FINALIZED") return { label: "Finalizzato", tone: "success" as const };
+    return { label: "Bozza", tone: "warning" as const };
   }
 
   return (
@@ -92,15 +122,17 @@ export function ChartImporter({
             <span className="eyebrow">Azienda selezionata</span>
             <h2 id="chart-history-title">Bozze recenti</h2>
           </div>
-          <StatusBadge tone="warning">Solo bozze</StatusBadge>
+          <StatusBadge tone="info">Flusso controllato</StatusBadge>
         </div>
         {imports.length === 0 ? (
           <p className="emptyInline">Nessun piano dei conti importato.</p>
-        ) : imports.map((item) => (
+        ) : imports.map((item) => {
+          const status = statusView(item.status);
+          return (
           <details className="chartImportCard" key={item.id}>
             <summary>
               <span><strong>{item.sourceFileName}</strong><small>{item.rowCount} conti · {new Date(item.createdAt).toLocaleString("it-IT")}</small></span>
-              <StatusBadge tone="warning">Bozza</StatusBadge>
+              <StatusBadge tone={status.tone}>{status.label}</StatusBadge>
             </summary>
             <p className="hashLine">SHA-256: <code>{item.fileHash}</code></p>
             <div className="tableScroll">
@@ -119,8 +151,22 @@ export function ChartImporter({
               </table>
             </div>
             {item.rowCount > item.lines.length ? <p className="formHint">Anteprima limitata alle prime 100 righe.</p> : null}
+            <div className="chartImportActions">
+              {item.status === "DRAFT" && canEdit ? (
+                <button
+                  className="button primary"
+                  type="button"
+                  disabled={reviewingId === item.id}
+                  onClick={() => requestReview(item.id)}
+                >
+                  {reviewingId === item.id ? "Invio in corso…" : "Invia alla revisione"}
+                </button>
+              ) : null}
+              {item.approvalId ? <Link className="button secondary" href={"/approvazioni/" + item.approvalId}>Apri revisione</Link> : null}
+            </div>
           </details>
-        ))}
+          );
+        })}
       </section>
     </div>
   );

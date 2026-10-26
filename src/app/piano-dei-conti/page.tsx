@@ -10,7 +10,10 @@ export default async function ChartOfAccountsPage() {
     where: { companyId: context.companyId },
     orderBy: { createdAt: "desc" },
     take: 20,
-    include: { lines: { orderBy: { position: "asc" }, take: 100 } }
+    include: {
+      lines: { orderBy: { position: "asc" }, take: 100 },
+      approvals: { orderBy: { createdAt: "desc" }, take: 1, select: { id: true } }
+    }
   });
   const serialized: ChartImportView[] = imports.map((item) => ({
     id: item.id,
@@ -19,6 +22,7 @@ export default async function ChartOfAccountsPage() {
     rowCount: item.rowCount,
     status: item.status,
     createdAt: item.createdAt.toISOString(),
+    approvalId: item.approvals[0]?.id ?? null,
     lines: item.lines
   }));
   return (

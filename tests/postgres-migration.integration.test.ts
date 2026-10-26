@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 const migration = readFileSync(resolve("prisma/migrations/202610220001_phase1/migration.sql"), "utf8");
 const onboardingMigration = readFileSync(resolve("prisma/migrations/202610240001_phase2_onboarding/migration.sql"), "utf8");
 const chartImportMigration = readFileSync(resolve("prisma/migrations/202610240002_phase2_chart_import/migration.sql"), "utf8");
+const chartApprovalMigration = readFileSync(resolve("prisma/migrations/202610260001_phase2_chart_approval/migration.sql"), "utf8");
 let database: PGlite;
 
 const companyId = "00000000-0000-4000-8000-000000000001";
@@ -28,6 +29,7 @@ describe("migrazione PostgreSQL eseguibile", () => {
     await database.exec(migration);
     await database.exec(onboardingMigration);
     await database.exec(chartImportMigration);
+    await database.exec(chartApprovalMigration);
   });
 
   it("blocca la finalizzazione di una scrittura non quadrata", async () => {
@@ -93,5 +95,42 @@ describe("migrazione PostgreSQL eseguibile", () => {
       "UPDATE \"ChartImport\" SET status = 'APPROVED' " +
         "WHERE id = '00000000-0000-4000-8000-000000000007';"
     )).rejects.toThrow();
+  });
+
+  it("richiede un solo oggetto per approvazione e rende immutabile il piano finalizzato", async () => {
+    await database.exec(
+      "INSERT INTO \"Company\" (id, name, \"updatedAt\") VALUES ('" + companyId + "', 'Azienda test isolata', now());" +
+      "INSERT INTO \"User\" (id, email, \"passwordHash\", \"displayName\", \"updatedAt\") VALUES ('" + userId +
+        "', 'utente@example.test', 'hash-fittizio', 'Utente fittizio', now());" +
+      "INSERT INTO \"ChartImport\" (id, \"companyId\", \"sourceFileName\", \"fileHash\", \"rowCount\", \"createdById\", \"updatedAt\") " +
+        "VALUES ('00000000-0000-4000-8000-000000000010', '" + companyId +
+        "', 'piano-fittizio.csv', 'hash-approvazione', 1, '" + userId + "', now());" +
+      "INSERT INTO \"ChartAccountDraftLine\" (id, \"importId\", code, name, position) " +
+        "VALUES ('00000000-0000-4000-8000-000000000011', '00000000-0000-4000-8000-000000000010', '100', 'Cassa fittizia', 1);"
+    );
+    await expect(database.exec(
+      "INSERT INTO \"ApprovalRequest\" (id, \"companyId\", \"objectType\", \"objectVersion\", \"objectHash\", \"requestedById\", snapshot, diff, anomalies, \"updatedAt\") " +
+        "VALUES ('00000000-0000-4000-8000-000000000012', '" + companyId +
+        "', 'CHART_IMPORT', 1, 'hash', '" + userId + "', '{}', '{}', '[]', now());"
+    )).rejects.toThrow();
+    await database.exec(
+      "INSERT INTO \"ApprovalRequest\" (id, \"companyId\", \"chartImportId\", \"objectType\", \"objectVersion\", \"objectHash\", \"requestedById\", snapshot, diff, anomalies, \"updatedAt\") " +
+        "VALUES ('00000000-0000-4000-8000-000000000013', '" + companyId +
+        "', '00000000-0000-4000-8000-000000000010', 'CHART_IMPORT', 1, 'hash', '" + userId +
+        "', '{}', '{}', '[]', now());" +
+      "INSERT INTO \"ApprovalDecision\" (id, \"approvalRequestId\", \"actorId\", decision, \"observedHash\") " +
+        "VALUES ('00000000-0000-4000-8000-000000000014', '00000000-0000-4000-8000-000000000013', '" +
+        userId + "', 'APPROVE', 'hash');" +
+      "UPDATE \"ApprovalRequest\" SET status = 'APPROVED' WHERE id = '00000000-0000-4000-8000-000000000013';" +
+      "UPDATE \"ChartImport\" SET status = 'PENDING_APPROVAL' WHERE id = '00000000-0000-4000-8000-000000000010';" +
+      "UPDATE \"ChartImport\" SET status = 'APPROVED' WHERE id = '00000000-0000-4000-8000-000000000010';" +
+      "UPDATE \"ChartImport\" SET status = 'FINALIZED', \"finalizedAt\" = now() WHERE id = '00000000-0000-4000-8000-000000000010';"
+    );
+    await expect(database.exec(
+      "UPDATE \"ChartAccountDraftLine\" SET name = 'Alterata' WHERE id = '00000000-0000-4000-8000-000000000011';"
+    )).rejects.toThrow(/immutabili/i);
+    await expect(database.exec(
+      "UPDATE \"ChartImport\" SET \"sourceFileName\" = 'alterato.csv' WHERE id = '00000000-0000-4000-8000-000000000010';"
+    )).rejects.toThrow(/immutabile/i);
   });
 });
