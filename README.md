@@ -105,7 +105,7 @@ npm run build
 
 I test E2E avviano l'app in modalita sviluppo e usano Google Chrome installato sul sistema. I flussi autenticati completi richiedono anche il database di test configurato in `.env`.
 
-Ultima verifica locale (28 ottobre 2026): typecheck, lint e 69 test automatici superati; schema Prisma valido. Le sei migrazioni sono state eseguite realmente su PostgreSQL embedded (PGlite), inclusi gate di stato, immutabilita e provenienza dei saldi iniziali. La build e i test E2E vengono eseguiti anche dalla pipeline GitHub.
+Ultima verifica locale (28 ottobre 2026): typecheck, lint e 69 test automatici superati; schema Prisma valido. Le sette migrazioni sono state eseguite realmente su PostgreSQL embedded (PGlite), inclusi gate di approvazione a livello database, immutabilita e provenienza dei saldi iniziali. La build e i test E2E vengono eseguiti anche dalla pipeline GitHub.
 
 ## Principio operativo
 

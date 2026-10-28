@@ -9,6 +9,7 @@ const chartImportMigration = readFileSync(resolve("prisma/migrations/20261024000
 const chartApprovalMigration = readFileSync(resolve("prisma/migrations/202610260001_phase2_chart_approval/migration.sql"), "utf8");
 const businessPartnerMigration = readFileSync(resolve("prisma/migrations/202610280001_phase2_business_partners/migration.sql"), "utf8");
 const openingBalancesMigration = readFileSync(resolve("prisma/migrations/202610280002_phase2_opening_balances/migration.sql"), "utf8");
+const accountingDraftGateMigration = readFileSync(resolve("prisma/migrations/202610280003_accounting_draft_approval_gate/migration.sql"), "utf8");
 let database: PGlite;
 
 const companyId = "00000000-0000-4000-8000-000000000001";
@@ -34,21 +35,42 @@ describe("migrazione PostgreSQL eseguibile", () => {
     await database.exec(chartApprovalMigration);
     await database.exec(businessPartnerMigration);
     await database.exec(openingBalancesMigration);
+    await database.exec(accountingDraftGateMigration);
   });
 
   it("blocca la finalizzazione di una scrittura non quadrata", async () => {
     await seedDraft();
-    await database.exec(`INSERT INTO "AccountingLine" (id, "draftId", "accountCode", description, "debitCents", "creditCents") VALUES ('00000000-0000-4000-8000-000000000004', '${draftId}', '1000', 'Dare', 10000, 0);`);
-    await expect(database.exec(`UPDATE "AccountingDraft" SET status = 'FINALIZED' WHERE id = '${draftId}';`)).rejects.toThrow(/non quadrata/i);
+    await database.exec(`
+      INSERT INTO "AccountingLine" (id, "draftId", "accountCode", description, "debitCents", "creditCents") VALUES ('00000000-0000-4000-8000-000000000004', '${draftId}', '1000', 'Dare', 10000, 0);
+      INSERT INTO "ApprovalRequest" (id, "companyId", "draftId", "objectType", "objectVersion", "objectHash", "requestedById", snapshot, diff, anomalies, "updatedAt")
+        VALUES ('00000000-0000-4000-8000-000000000024', '${companyId}', '${draftId}', 'ACCOUNTING_DRAFT', 1, 'hash-non-quadrata', '${userId}', '{}', '{}', '[]', now());
+      INSERT INTO "ApprovalDecision" (id, "approvalRequestId", "actorId", decision, "observedHash")
+        VALUES ('00000000-0000-4000-8000-000000000025', '00000000-0000-4000-8000-000000000024', '${userId}', 'APPROVE', 'hash-non-quadrata');
+      UPDATE "ApprovalRequest" SET status = 'APPROVED' WHERE id = '00000000-0000-4000-8000-000000000024';
+      UPDATE "AccountingDraft" SET status = 'PENDING_APPROVAL' WHERE id = '${draftId}';
+      UPDATE "AccountingDraft" SET status = 'APPROVED' WHERE id = '${draftId}';
+    `);
+    await expect(database.exec(`UPDATE "AccountingDraft" SET status = 'FINALIZED', "finalizedAt" = now() WHERE id = '${draftId}';`)).rejects.toThrow(/non quadrata/i);
   });
 
-  it("consente una finalizzazione quadrata e rende testata e righe immutabili", async () => {
+  it("richiede approvazione anche per una scrittura quadrata e la rende immutabile", async () => {
     await seedDraft();
     await database.exec(`
       INSERT INTO "AccountingLine" (id, "draftId", "accountCode", description, "debitCents", "creditCents") VALUES
         ('00000000-0000-4000-8000-000000000004', '${draftId}', '1000', 'Dare', 10000, 0),
         ('00000000-0000-4000-8000-000000000005', '${draftId}', '2000', 'Avere', 0, 10000);
-      UPDATE "AccountingDraft" SET status = 'FINALIZED' WHERE id = '${draftId}';
+    `);
+    await expect(database.exec(`UPDATE "AccountingDraft" SET status = 'FINALIZED', "finalizedAt" = now() WHERE id = '${draftId}';`))
+      .rejects.toThrow(/transizione|approvazione/i);
+    await database.exec(`
+      INSERT INTO "ApprovalRequest" (id, "companyId", "draftId", "objectType", "objectVersion", "objectHash", "requestedById", snapshot, diff, anomalies, "updatedAt")
+        VALUES ('00000000-0000-4000-8000-000000000022', '${companyId}', '${draftId}', 'ACCOUNTING_DRAFT', 1, 'hash-scrittura', '${userId}', '{}', '{}', '[]', now());
+      INSERT INTO "ApprovalDecision" (id, "approvalRequestId", "actorId", decision, "observedHash")
+        VALUES ('00000000-0000-4000-8000-000000000023', '00000000-0000-4000-8000-000000000022', '${userId}', 'APPROVE', 'hash-scrittura');
+      UPDATE "ApprovalRequest" SET status = 'APPROVED' WHERE id = '00000000-0000-4000-8000-000000000022';
+      UPDATE "AccountingDraft" SET status = 'PENDING_APPROVAL' WHERE id = '${draftId}';
+      UPDATE "AccountingDraft" SET status = 'APPROVED' WHERE id = '${draftId}';
+      UPDATE "AccountingDraft" SET status = 'FINALIZED', "finalizedAt" = now() WHERE id = '${draftId}';
     `);
     await expect(database.exec(`UPDATE "AccountingDraft" SET description = 'Alterata' WHERE id = '${draftId}';`)).rejects.toThrow(/immutabile/i);
     await expect(database.exec(`UPDATE "AccountingLine" SET "debitCents" = 9999 WHERE id = '00000000-0000-4000-8000-000000000004';`)).rejects.toThrow(/immutabili/i);

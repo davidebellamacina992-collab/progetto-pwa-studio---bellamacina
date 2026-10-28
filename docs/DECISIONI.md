@@ -102,6 +102,12 @@
 
 **Motivazione:** i saldi sono una scrittura di apertura e devono rispettare la stessa quadratura, revisione, approvazione e immutabilita delle altre registrazioni. Il collegamento a un piano finalizzato impedisce codici arbitrari e il vincolo univoco sull'hash evita caricamenti duplicati nella stessa azienda.
 
+## D-018 - Gate SQL uniforme per tutte le scritture
+
+**Decisione:** il trigger PostgreSQL delle scritture verifica non solo la quadratura, ma anche la sequenza degli stati e l'esistenza delle decisioni umane coerenti con hash e numero di approvatori richiesto.
+
+**Motivazione:** il controllo applicativo non basta contro chiamate o accessi diretti al database. Piano dei conti, anagrafiche e scritture devono offrire la stessa difesa in profondita.
+
 ## Registro di fase
 
 La Fase 1 stabilisce le fondamenta. Le decisioni su OCR, storage, coda e formati di export saranno finalizzate nelle fasi che introducono tali funzioni.
