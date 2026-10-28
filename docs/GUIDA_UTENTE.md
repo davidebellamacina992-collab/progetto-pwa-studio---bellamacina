@@ -86,7 +86,13 @@ Una anagrafica finalizzata e immutabile. In caso di errore non si corregge il da
 
 > Le valutazioni fiscali e civilistiche rilevanti devono essere validate dal commercialista.
 
+## Saldi iniziali
+
+Prima finalizza un piano dei conti. Apri **Saldi iniziali**, seleziona quel piano e carica un CSV UTF-8 con colonne `codice`, `descrizione`, `dare`, `avere`. Usa la virgola o il punto per i decimali e valorizza un solo lato per riga. Un esempio fittizio e disponibile in `docs/esempi/saldi-iniziali-fittizi.csv`.
+
+Il sistema rifiuta file non quadrati, conti duplicati, importi con piu di due decimali e codici assenti dal piano selezionato. Un file valido crea una scrittura in **Bozza**: scegli **Invia alla revisione** per avviare approvazione e finalizzazione controllate.
+
 ## Moduli successivi
 
-Selezione del piano operativo, saldi iniziali, documenti, prima nota, banche, IVA, personale, cespiti, chiusure, bilancio e controllo di gestione saranno aggiunti negli incrementi successivi e useranno lo stesso flusso di approvazione.
+Selezione del piano operativo, documenti, prima nota, banche, IVA, personale, cespiti, chiusure, bilancio e controllo di gestione saranno aggiunti negli incrementi successivi e useranno lo stesso flusso di approvazione.
 

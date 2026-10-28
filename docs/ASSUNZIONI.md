@@ -33,6 +33,9 @@ Le assunzioni sono scelte prudenziali e sostituibili; non sono requisiti fiscali
 11. Una anagrafica deve contenere almeno un identificativo tra codice fiscale e partita IVA. Gli identificativi sono normalizzati in maiuscolo e univoci nella singola azienda, non globalmente.
 12. In questo incremento non vengono verificate banche dati esterne e non viene attribuita validita fiscale agli identificativi: il responsabile ne conferma la correttezza durante la revisione.
 13. Una anagrafica respinta o finalizzata non viene sovrascritta. Le correzioni saranno introdotte come nuova versione collegata all'originale prima che documenti e registrazioni inizino a referenziarla.
+14. Il tracciato dei saldi iniziali usa `codice, descrizione, dare, avere`; ogni conto compare una sola volta e valorizza un solo lato. Non sono ammessi importi negativi: la posizione contabile e espressa dal lato Dare/Avere.
+15. I saldi possono riferirsi soltanto a un piano dei conti gia finalizzato della stessa azienda. La scelta per il singolo import non equivale ancora alla selezione globale del piano operativo.
+16. L'azienda creata dal seed di sviluppo disattiva il TOTP per consentire una demo immediata con due supervisori fittizi; questa eccezione non e disponibile in produzione.
 
 ## Da validare prima della produzione
 

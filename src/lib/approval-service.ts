@@ -16,12 +16,22 @@ function snapshotDraft(draft: {
   id: string;
   description: string;
   version: number;
+  sourceType?: string | null;
+  sourceFileName?: string | null;
+  sourceFileHash?: string | null;
+  sourceChartImportId?: string | null;
   lines: Array<{ accountCode: string; description: string; debitCents: bigint; creditCents: bigint }>;
 }) {
   return {
     id: draft.id,
     description: draft.description,
     version: draft.version,
+    ...(draft.sourceType ? {
+      sourceType: draft.sourceType,
+      sourceFileName: draft.sourceFileName,
+      sourceFileHash: draft.sourceFileHash,
+      sourceChartImportId: draft.sourceChartImportId
+    } : {}),
     lines: draft.lines.map((line) => ({
       accountCode: line.accountCode,
       description: line.description,
@@ -90,7 +100,7 @@ function assertBalanced(lines: Array<{ debitCents: bigint; creditCents: bigint }
 }
 
 export async function requestDraftApproval(context: SessionContext, draftId: string, ipAddress?: string | null) {
-  assertRole(context, [Role.OPERATOR, Role.SUPERVISOR]);
+  assertRole(context, [Role.OPERATOR, Role.SUPERVISOR, Role.ADMIN]);
   return db.$transaction(async (tx) => {
     const draft = await tx.accountingDraft.findFirst({
       where: { id: draftId, companyId: context.companyId },

@@ -11,11 +11,12 @@ async function main() {
   const passwordHash = await argon2.hash(password, { type: argon2.argon2id });
   const company = await prisma.company.upsert({
     where: { id: "00000000-0000-4000-8000-000000000001" },
-    update: {},
+    update: { approverTotpRequired: false },
     create: {
       id: "00000000-0000-4000-8000-000000000001",
       name: "Azienda Dimostrativa S.r.l. — DATI DI ESEMPIO",
-      fourEyesRequired: true
+      fourEyesRequired: true,
+      approverTotpRequired: false
     }
   });
   const demoUsers = [

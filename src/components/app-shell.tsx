@@ -9,6 +9,7 @@ const navigation = [
   { href: "/onboarding", label: "Configurazione", icon: "◇" },
   { href: "/piano-dei-conti", label: "Piano dei conti", icon: "▦" },
   { href: "/anagrafiche", label: "Anagrafiche", icon: "♙" },
+  { href: "/saldi-iniziali", label: "Saldi iniziali", icon: "±" },
   { href: "/approvazioni", label: "Approvazioni", icon: "✓" },
   { href: "/audit", label: "Registro attività", icon: "≡" },
   { href: "/sicurezza", label: "Sicurezza account", icon: "◈" },

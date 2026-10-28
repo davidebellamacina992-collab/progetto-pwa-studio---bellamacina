@@ -8,6 +8,7 @@ const onboardingMigration = readFileSync(resolve("prisma/migrations/202610240001
 const chartImportMigration = readFileSync(resolve("prisma/migrations/202610240002_phase2_chart_import/migration.sql"), "utf8");
 const chartApprovalMigration = readFileSync(resolve("prisma/migrations/202610260001_phase2_chart_approval/migration.sql"), "utf8");
 const businessPartnerMigration = readFileSync(resolve("prisma/migrations/202610280001_phase2_business_partners/migration.sql"), "utf8");
+const openingBalancesMigration = readFileSync(resolve("prisma/migrations/202610280002_phase2_opening_balances/migration.sql"), "utf8");
 let database: PGlite;
 
 const companyId = "00000000-0000-4000-8000-000000000001";
@@ -32,6 +33,7 @@ describe("migrazione PostgreSQL eseguibile", () => {
     await database.exec(chartImportMigration);
     await database.exec(chartApprovalMigration);
     await database.exec(businessPartnerMigration);
+    await database.exec(openingBalancesMigration);
   });
 
   it("blocca la finalizzazione di una scrittura non quadrata", async () => {
@@ -169,5 +171,21 @@ describe("migrazione PostgreSQL eseguibile", () => {
       .rejects.toThrow(/immutabile/i);
     await expect(database.exec(`DELETE FROM "BusinessPartner" WHERE id = '${partnerId}';`))
       .rejects.toThrow(/immutabile/i);
+  });
+
+  it("vincola la provenienza dei saldi iniziali e impedisce file duplicati", async () => {
+    await seedDraft();
+    await expect(database.exec(`UPDATE "AccountingDraft" SET "sourceType" = 'OPENING_BALANCE_CSV' WHERE id = '${draftId}';`))
+      .rejects.toThrow();
+    await database.exec(`
+      INSERT INTO "ChartImport" (id, "companyId", "sourceFileName", "fileHash", "rowCount", "createdById", "updatedAt")
+        VALUES ('00000000-0000-4000-8000-000000000020', '${companyId}', 'piano-fittizio.csv', 'hash-saldi-chart', 1, '${userId}', now());
+      UPDATE "AccountingDraft" SET "sourceType" = 'OPENING_BALANCE_CSV', "sourceFileName" = 'saldi-fittizi.csv',
+        "sourceFileHash" = '${"a".repeat(64)}', "sourceChartImportId" = '00000000-0000-4000-8000-000000000020' WHERE id = '${draftId}';
+    `);
+    await expect(database.exec(`
+      INSERT INTO "AccountingDraft" (id, "companyId", description, "createdById", "sourceType", "sourceFileName", "sourceFileHash", "sourceChartImportId", "updatedAt")
+        VALUES ('00000000-0000-4000-8000-000000000021', '${companyId}', 'Duplicato', '${userId}', 'OPENING_BALANCE_CSV', 'duplicato.csv', '${"a".repeat(64)}', '00000000-0000-4000-8000-000000000020', now());
+    `)).rejects.toThrow();
   });
 });

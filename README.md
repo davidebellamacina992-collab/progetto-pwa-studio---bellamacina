@@ -18,7 +18,7 @@ La **Fase 1 - Fondamenta** realizza l'infrastruttura trasversale su cui poggeran
 - interfaccia italiana per dashboard, richieste e registro di audit;
 - test automatici dei divieti di bypass.
 
-La **Fase 2 è in corso**. Sono disponibili quattro incrementi verificabili:
+La **Fase 2 è in corso**. Sono disponibili cinque incrementi verificabili:
 
 - wizard di onboarding aziendale in cinque passaggi;
 - salvataggio automatico esclusivamente come bozza;
@@ -35,9 +35,13 @@ La **Fase 2 è in corso**. Sono disponibili quattro incrementi verificabili:
 - identificativi normalizzati, duplicati bloccati per azienda e separazione multi-tenant;
 - revisione, approvazione forte, eventuale doppia approvazione e finalizzazione delle anagrafiche;
 - anagrafiche finalizzate immutabili anche contro tentativi SQL diretti;
+- importazione dei saldi iniziali da CSV collegata a un piano dei conti finalizzato;
+- conversione esatta in centesimi, quadratura Dare/Avere bloccante e verifica dei codici conto;
+- provenienza tramite nome file, SHA-256 e piano selezionato, con duplicati bloccati per azienda;
+- saldi acquisiti come scrittura in bozza e sottoposti allo stesso gate umano;
 - stato `PRONTA_PER_REVISIONE` al completamento, senza attivazione o finalizzazione automatica.
 
-I saldi iniziali e gli altri import saranno i prossimi incrementi della Fase 2.
+Gli altri import e la selezione del piano operativo saranno i prossimi incrementi della Fase 2.
 
 ## Avvio in 5 minuti con Docker
 
@@ -79,6 +83,16 @@ npm run db:seed
 npm run dev
 ```
 
+## Accesso dimostrativo locale
+
+Dopo `npm run db:seed` sono disponibili esclusivamente utenze fittizie `*.test`:
+
+- `operatore@example.test` prepara e invia le bozze;
+- `supervisore1@example.test` e `supervisore2@example.test` eseguono le due approvazioni;
+- `commercialista@example.test` consulta i dati.
+
+La password e il valore di `SEED_DEMO_PASSWORD`; se non impostato, soltanto in sviluppo, e `CambiaSubito!2026`. L'azienda dimostrativa mantiene il principio dei quattro occhi ma disattiva il TOTP per rendere eseguibile la demo locale. In ambienti reali il seed e bloccato e il TOTP degli approvatori resta attivo per impostazione predefinita.
+
 ## Verifiche
 
 ```bash
@@ -91,7 +105,7 @@ npm run build
 
 I test E2E avviano l'app in modalita sviluppo e usano Google Chrome installato sul sistema. I flussi autenticati completi richiedono anche il database di test configurato in `.env`.
 
-Ultima verifica locale (28 ottobre 2026): typecheck, lint e 64 test automatici superati; schema Prisma valido. Le cinque migrazioni sono state eseguite realmente su PostgreSQL embedded (PGlite), inclusi gate di stato e immutabilita di piano dei conti e anagrafiche. La build e i test E2E vengono eseguiti anche dalla pipeline GitHub.
+Ultima verifica locale (28 ottobre 2026): typecheck, lint e 69 test automatici superati; schema Prisma valido. Le sei migrazioni sono state eseguite realmente su PostgreSQL embedded (PGlite), inclusi gate di stato, immutabilita e provenienza dei saldi iniziali. La build e i test E2E vengono eseguiti anche dalla pipeline GitHub.
 
 ## Principio operativo
 

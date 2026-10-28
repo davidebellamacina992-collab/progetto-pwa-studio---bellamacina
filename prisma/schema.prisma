@@ -137,6 +137,7 @@ model ChartImport {
   createdBy      User                    @relation("ChartImportCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
   lines          ChartAccountDraftLine[]
   approvals      ApprovalRequest[]
+  openingBalanceDrafts AccountingDraft[] @relation("OpeningBalanceChart")
 
   @@unique([companyId, fileHash])
   @@index([companyId, status])
@@ -218,14 +219,20 @@ model AccountingDraft {
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
   finalizedAt    DateTime?
+  sourceType     String?           @db.VarChar(40)
+  sourceFileName String?           @db.VarChar(255)
+  sourceFileHash String?           @db.VarChar(64)
+  sourceChartImportId String?       @db.Uuid
   company        Company           @relation(fields: [companyId], references: [id], onDelete: Restrict)
   createdBy      User              @relation("DraftCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
   adjustsEntry   AccountingDraft?  @relation("Adjustment", fields: [adjustsEntryId], references: [id], onDelete: Restrict)
   adjustments    AccountingDraft[] @relation("Adjustment")
   lines          AccountingLine[]
   approvals      ApprovalRequest[]
+  sourceChartImport ChartImport?    @relation("OpeningBalanceChart", fields: [sourceChartImportId], references: [id], onDelete: Restrict)
 
   @@index([companyId, status])
+  @@unique([companyId, sourceFileHash])
 }
 
 model AccountingLine {

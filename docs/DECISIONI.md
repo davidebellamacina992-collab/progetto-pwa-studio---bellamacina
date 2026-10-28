@@ -96,11 +96,17 @@
 
 **Motivazione:** una anagrafica errata condiziona documenti, scadenze e registrazioni successive. Il vincolo di unicita per azienda evita duplicati evidenti; il riferimento esclusivo della richiesta, il filtro tenant e i trigger PostgreSQL impediscono approvazioni ambigue, finalizzazioni dirette e alterazioni successive.
 
+## D-017 - Saldi iniziali come scrittura contabile con provenienza
+
+**Decisione:** importare i saldi iniziali direttamente come `AccountingDraft`, senza creare un secondo motore contabile. La bozza conserva file, hash e piano dei conti finalizzato di origine; gli importi sono convertiti in centesimi interi.
+
+**Motivazione:** i saldi sono una scrittura di apertura e devono rispettare la stessa quadratura, revisione, approvazione e immutabilita delle altre registrazioni. Il collegamento a un piano finalizzato impedisce codici arbitrari e il vincolo univoco sull'hash evita caricamenti duplicati nella stessa azienda.
+
 ## Registro di fase
 
 La Fase 1 stabilisce le fondamenta. Le decisioni su OCR, storage, coda e formati di export saranno finalizzate nelle fasi che introducono tali funzioni.
 
-La Fase 2 comprende ora il profilo aziendale guidato, l'import controllato del piano dei conti e le anagrafiche clienti/fornitori fino alla finalizzazione umana. I saldi iniziali restano un incremento successivo della stessa fase.
+La Fase 2 comprende ora il profilo aziendale guidato, piano dei conti, anagrafiche e saldi iniziali fino alla finalizzazione umana.
 
 ## Verifiche del 23 ottobre 2026
 
