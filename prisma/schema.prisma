@@ -49,6 +49,12 @@ enum VatPeriodicity {
   NOT_APPLICABLE
 }
 
+enum PartnerKind {
+  CUSTOMER
+  SUPPLIER
+  BOTH
+}
+
 model User {
   id                  String              @id @default(uuid()) @db.Uuid
   email               String              @unique
@@ -67,6 +73,7 @@ model User {
   drafts              AccountingDraft[]   @relation("DraftCreatedBy")
   onboardingUpdates   CompanyOnboarding[] @relation("OnboardingUpdatedBy")
   chartImports        ChartImport[]       @relation("ChartImportCreatedBy")
+  businessPartners    BusinessPartner[]   @relation("BusinessPartnerCreatedBy")
 }
 
 model Company {
@@ -84,6 +91,34 @@ model Company {
   drafts                 AccountingDraft[]
   onboarding             CompanyOnboarding?
   chartImports           ChartImport[]
+  businessPartners       BusinessPartner[]
+}
+
+model BusinessPartner {
+  id            String            @id @default(uuid()) @db.Uuid
+  companyId     String            @db.Uuid
+  kind          PartnerKind
+  displayName   String            @db.VarChar(200)
+  taxCode       String?           @db.VarChar(16)
+  vatNumber     String?           @db.VarChar(20)
+  email         String?           @db.VarChar(254)
+  phone         String?           @db.VarChar(40)
+  address       String?           @db.VarChar(300)
+  countryCode   String            @default("IT") @db.VarChar(2)
+  status        WorkStatus        @default(DRAFT)
+  version       Int               @default(1)
+  createdById   String            @db.Uuid
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  finalizedAt   DateTime?
+  company       Company           @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  createdBy     User              @relation("BusinessPartnerCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  approvals     ApprovalRequest[]
+
+  @@index([companyId, status])
+  @@index([companyId, displayName])
+  @@unique([companyId, taxCode])
+  @@unique([companyId, vatNumber])
 }
 
 model ChartImport {
@@ -210,6 +245,7 @@ model ApprovalRequest {
   companyId              String             @db.Uuid
   draftId                String?            @db.Uuid
   chartImportId          String?            @db.Uuid
+  businessPartnerId      String?            @db.Uuid
   objectType             String
   objectVersion          Int
   objectHash             String
@@ -228,11 +264,13 @@ model ApprovalRequest {
   company                Company            @relation(fields: [companyId], references: [id], onDelete: Restrict)
   draft                  AccountingDraft?   @relation(fields: [draftId], references: [id], onDelete: Restrict)
   chartImport            ChartImport?       @relation(fields: [chartImportId], references: [id], onDelete: Restrict)
+  businessPartner        BusinessPartner?   @relation(fields: [businessPartnerId], references: [id], onDelete: Restrict)
   requestedBy            User               @relation("RequestedBy", fields: [requestedById], references: [id], onDelete: Restrict)
   decisions              ApprovalDecision[]
 
   @@unique([draftId, objectVersion])
   @@unique([chartImportId, objectVersion])
+  @@unique([businessPartnerId, objectVersion])
   @@index([companyId, status])
 }
 

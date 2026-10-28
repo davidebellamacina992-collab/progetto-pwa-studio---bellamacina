@@ -219,6 +219,13 @@ thead th { color: var(--muted); font-size: .67rem; text-transform: uppercase; le
 .hashLine { margin: 0 .2rem .8rem; color: var(--muted); font-size: .68rem; overflow-wrap: anywhere; }
 .hashLine code { color: inherit; }
 .chartImportActions { padding: 0 .2rem 1rem; display: flex; flex-wrap: wrap; gap: .6rem; }
+.partnerRow { padding: 1rem .2rem .7rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.partnerRow > span:first-child { display: grid; gap: .25rem; }
+.partnerRow small { color: var(--muted); font-size: .7rem; }
+.partnerFacts { margin: 0 .2rem .9rem; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .65rem; }
+.partnerFacts div { min-width: 0; }
+.partnerFacts dt { color: var(--muted); font-size: .65rem; }
+.partnerFacts dd { margin: .2rem 0 0; overflow-wrap: anywhere; font-size: .76rem; }
 
 @media (max-width: 1020px) {
   .metricGrid { grid-template-columns: repeat(2, 1fr); }
@@ -252,6 +259,7 @@ thead th { color: var(--muted); font-size: .67rem; text-transform: uppercase; le
   .wizardSteps { grid-template-columns: repeat(5, minmax(52px, 1fr)); overflow-x: auto; }
   .wizardSteps button { font-size: .62rem; }
   .formGrid { grid-template-columns: 1fr; }
+  .partnerFacts { grid-template-columns: 1fr; }
   .summaryList div:nth-child(odd) { padding-right: 0; }
   .loginIntro { padding: 1.5rem; }
   .introCopy h1 { font-size: 2.6rem; }

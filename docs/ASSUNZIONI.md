@@ -30,6 +30,9 @@ Le assunzioni sono scelte prudenziali e sostituibili; non sono requisiti fiscali
 8. Un import del piano dei conti resta non utilizzabile durante bozza, revisione e approvazione. La finalizzazione richiede un'azione separata del responsabile e lo rende immutabile.
 9. In questa fase possono esistere piu piani finalizzati per la stessa azienda, ma nessun modulo contabile li usa ancora come piano attivo. La selezione della versione operativa sara introdotta insieme alle registrazioni.
 10. Un piano respinto non viene riaperto: l'operatore corregge il file e crea una nuova bozza, preservando integralmente richiesta e decisione precedenti.
+11. Una anagrafica deve contenere almeno un identificativo tra codice fiscale e partita IVA. Gli identificativi sono normalizzati in maiuscolo e univoci nella singola azienda, non globalmente.
+12. In questo incremento non vengono verificate banche dati esterne e non viene attribuita validita fiscale agli identificativi: il responsabile ne conferma la correttezza durante la revisione.
+13. Una anagrafica respinta o finalizzata non viene sovrascritta. Le correzioni saranno introdotte come nuova versione collegata all'originale prima che documenti e registrazioni inizino a referenziarla.
 
 ## Da validare prima della produzione
 

@@ -1,8 +1,8 @@
 # Architettura
 
-## Ambito della Fase 1
+## Ambito corrente
 
-La prima fase costruisce i servizi trasversali, prima di introdurre logica contabile: identita, aziende, autorizzazioni, audit e approvazioni. I moduli futuri possono creare bozze, ma non possono finalizzarle direttamente.
+La Fase 1 costruisce i servizi trasversali: identita, aziende, autorizzazioni, audit e approvazioni. La Fase 2 riusa questi confini per onboarding, piano dei conti e anagrafiche; nessun modulo puo finalizzare direttamente.
 
 ## Componenti
 
@@ -29,6 +29,13 @@ Il selettore azienda salva nel cookie `HttpOnly` soltanto un identificativo gia 
 - `ApprovalDecision`: decisione immutabile, motivazione e indice dell'approvatore.
 - `AuditLog`: evento append-only con attore, azienda, azione, oggetto, valori prima/dopo, motivo, IP normalizzato e timestamp.
 
+## Modello della Fase 2
+
+- `CompanyOnboarding`: configurazione dichiarata e versionata, senza attivazione fiscale implicita.
+- `ChartImport` e `ChartAccountDraftLine`: piano dei conti validato, revisionabile e immutabile dopo la finalizzazione.
+- `BusinessPartner`: cliente, fornitore o soggetto misto; identificativi unici per azienda, stato versionato e finalizzazione protetta.
+- `ApprovalRequest`: riferimento esclusivo verificato dal database verso scrittura, piano dei conti oppure anagrafica.
+
 ## Invarianti
 
 1. Le query di dominio richiedono sempre `companyId` e un'appartenenza valida.
@@ -42,5 +49,5 @@ Il selettore azienda salva nel cookie `HttpOnly` soltanto un identificativo gia 
 
 ## Evoluzione
 
-I moduli futuri registreranno un proprio `objectType` e `objectId` nella richiesta di approvazione e forniranno una funzione di finalizzazione idempotente. L'orchestratore eseguira tale funzione soltanto dopo aver verificato stato, versione dell'oggetto e autorizzazione corrente.
+I moduli futuri aggiungeranno un riferimento tipizzato e mutuamente esclusivo alla richiesta di approvazione e una finalizzazione protetta anche dal database. L'orchestratore eseguira la transizione soltanto dopo aver verificato stato, versione, hash dell'oggetto e autorizzazione corrente.
 

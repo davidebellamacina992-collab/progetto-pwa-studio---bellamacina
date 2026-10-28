@@ -18,7 +18,7 @@ La **Fase 1 - Fondamenta** realizza l'infrastruttura trasversale su cui poggeran
 - interfaccia italiana per dashboard, richieste e registro di audit;
 - test automatici dei divieti di bypass.
 
-La **Fase 2 è in corso**. Sono disponibili tre incrementi verificabili:
+La **Fase 2 è in corso**. Sono disponibili quattro incrementi verificabili:
 
 - wizard di onboarding aziendale in cinque passaggi;
 - salvataggio automatico esclusivamente come bozza;
@@ -31,9 +31,13 @@ La **Fase 2 è in corso**. Sono disponibili tre incrementi verificabili:
 - invio del piano dei conti alla revisione umana tramite il motore di approvazione condiviso;
 - approvazione forte, eventuale doppia approvazione, respinta motivata e finalizzazione separata;
 - immutabilita di testata e righe finalizzate garantita anche da trigger PostgreSQL;
+- creazione guidata di anagrafiche cliente, fornitore o miste, sempre come bozza;
+- identificativi normalizzati, duplicati bloccati per azienda e separazione multi-tenant;
+- revisione, approvazione forte, eventuale doppia approvazione e finalizzazione delle anagrafiche;
+- anagrafiche finalizzate immutabili anche contro tentativi SQL diretti;
 - stato `PRONTA_PER_REVISIONE` al completamento, senza attivazione o finalizzazione automatica.
 
-Le anagrafiche, i saldi iniziali e gli altri import saranno i prossimi incrementi della Fase 2.
+I saldi iniziali e gli altri import saranno i prossimi incrementi della Fase 2.
 
 ## Avvio in 5 minuti con Docker
 
@@ -87,7 +91,7 @@ npm run build
 
 I test E2E avviano l'app in modalita sviluppo e usano Google Chrome installato sul sistema. I flussi autenticati completi richiedono anche il database di test configurato in `.env`.
 
-Ultima verifica locale (26 ottobre 2026): typecheck, lint e 59 test automatici superati; schema Prisma valido. Le quattro migrazioni sono state eseguite realmente su PostgreSQL embedded (PGlite), inclusi gate di stato e immutabilita del piano dei conti. La pipeline GitHub conferma inoltre build Linux, audit dipendenze e test E2E.
+Ultima verifica locale (28 ottobre 2026): typecheck, lint e 64 test automatici superati; schema Prisma valido. Le cinque migrazioni sono state eseguite realmente su PostgreSQL embedded (PGlite), inclusi gate di stato e immutabilita di piano dei conti e anagrafiche. La build e i test E2E vengono eseguiti anche dalla pipeline GitHub.
 
 ## Principio operativo
 

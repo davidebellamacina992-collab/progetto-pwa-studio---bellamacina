@@ -3,6 +3,7 @@ node_modules
 build-next
 build-phase1
 dist-next
+dist-next-*
 .env
 .env.local
 coverage

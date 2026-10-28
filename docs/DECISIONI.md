@@ -90,11 +90,17 @@
 
 **Motivazione:** conferma forte, quattro occhi, MFA, respinta motivata e audit devono conservare lo stesso significato in tutti i moduli. Le transizioni del piano dei conti e la sua immutabilita dopo la finalizzazione sono protette anche da trigger PostgreSQL.
 
+## D-016 - Anagrafiche versionate nello stesso gate umano
+
+**Decisione:** clienti e fornitori sono oggetti aziendali versionati con stato proprio. Nascono in `DRAFT`, sono identificati almeno da codice fiscale o partita IVA e usano lo stesso motore polimorfico di approvazione.
+
+**Motivazione:** una anagrafica errata condiziona documenti, scadenze e registrazioni successive. Il vincolo di unicita per azienda evita duplicati evidenti; il riferimento esclusivo della richiesta, il filtro tenant e i trigger PostgreSQL impediscono approvazioni ambigue, finalizzazioni dirette e alterazioni successive.
+
 ## Registro di fase
 
 La Fase 1 stabilisce le fondamenta. Le decisioni su OCR, storage, coda e formati di export saranno finalizzate nelle fasi che introducono tali funzioni.
 
-La Fase 2 comprende ora il profilo aziendale guidato e l'import controllato del piano dei conti fino alla finalizzazione umana. Anagrafiche e saldi iniziali restano incrementi successivi della stessa fase.
+La Fase 2 comprende ora il profilo aziendale guidato, l'import controllato del piano dei conti e le anagrafiche clienti/fornitori fino alla finalizzazione umana. I saldi iniziali restano un incremento successivo della stessa fase.
 
 ## Verifiche del 23 ottobre 2026
 

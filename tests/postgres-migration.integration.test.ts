@@ -7,6 +7,7 @@ const migration = readFileSync(resolve("prisma/migrations/202610220001_phase1/mi
 const onboardingMigration = readFileSync(resolve("prisma/migrations/202610240001_phase2_onboarding/migration.sql"), "utf8");
 const chartImportMigration = readFileSync(resolve("prisma/migrations/202610240002_phase2_chart_import/migration.sql"), "utf8");
 const chartApprovalMigration = readFileSync(resolve("prisma/migrations/202610260001_phase2_chart_approval/migration.sql"), "utf8");
+const businessPartnerMigration = readFileSync(resolve("prisma/migrations/202610280001_phase2_business_partners/migration.sql"), "utf8");
 let database: PGlite;
 
 const companyId = "00000000-0000-4000-8000-000000000001";
@@ -30,6 +31,7 @@ describe("migrazione PostgreSQL eseguibile", () => {
     await database.exec(onboardingMigration);
     await database.exec(chartImportMigration);
     await database.exec(chartApprovalMigration);
+    await database.exec(businessPartnerMigration);
   });
 
   it("blocca la finalizzazione di una scrittura non quadrata", async () => {
@@ -132,5 +134,40 @@ describe("migrazione PostgreSQL eseguibile", () => {
     await expect(database.exec(
       "UPDATE \"ChartImport\" SET \"sourceFileName\" = 'alterato.csv' WHERE id = '00000000-0000-4000-8000-000000000010';"
     )).rejects.toThrow(/immutabile/i);
+  });
+
+  it("impedisce il bypass e rende immutabile una anagrafica finalizzata", async () => {
+    const partnerId = "00000000-0000-4000-8000-000000000015";
+    const approvalId = "00000000-0000-4000-8000-000000000016";
+    await database.exec(`
+      INSERT INTO "Company" (id, name, "updatedAt") VALUES ('${companyId}', 'Azienda test isolata', now());
+      INSERT INTO "User" (id, email, "passwordHash", "displayName", "updatedAt")
+        VALUES ('${userId}', 'utente@example.test', 'hash-fittizio', 'Utente fittizio', now());
+    `);
+    await expect(database.exec(`
+      INSERT INTO "BusinessPartner" (id, "companyId", kind, "displayName", "taxCode", "createdById", "updatedAt")
+        VALUES ('00000000-0000-4000-8000-000000000018', '${companyId}', 'CUSTOMER', 'Cliente non valido', 'minuscolo123', '${userId}', now());
+    `)).rejects.toThrow();
+    await database.exec(`
+      INSERT INTO "BusinessPartner" (id, "companyId", kind, "displayName", "taxCode", "createdById", "updatedAt")
+        VALUES ('${partnerId}', '${companyId}', 'CUSTOMER', 'Cliente fittizio', 'RSSMRA80A01H501U', '${userId}', now());
+    `);
+    await expect(database.exec(`
+      UPDATE "BusinessPartner" SET status = 'FINALIZED', "finalizedAt" = now() WHERE id = '${partnerId}';
+    `)).rejects.toThrow(/transizione|approvazione/i);
+    await database.exec(`
+      INSERT INTO "ApprovalRequest" (id, "companyId", "businessPartnerId", "objectType", "objectVersion", "objectHash", "requestedById", snapshot, diff, anomalies, "updatedAt")
+        VALUES ('${approvalId}', '${companyId}', '${partnerId}', 'BUSINESS_PARTNER', 1, 'hash-anagrafica', '${userId}', '{}', '{}', '[]', now());
+      INSERT INTO "ApprovalDecision" (id, "approvalRequestId", "actorId", decision, "observedHash")
+        VALUES ('00000000-0000-4000-8000-000000000017', '${approvalId}', '${userId}', 'APPROVE', 'hash-anagrafica');
+      UPDATE "ApprovalRequest" SET status = 'APPROVED' WHERE id = '${approvalId}';
+      UPDATE "BusinessPartner" SET status = 'PENDING_APPROVAL' WHERE id = '${partnerId}';
+      UPDATE "BusinessPartner" SET status = 'APPROVED' WHERE id = '${partnerId}';
+      UPDATE "BusinessPartner" SET status = 'FINALIZED', "finalizedAt" = now() WHERE id = '${partnerId}';
+    `);
+    await expect(database.exec(`UPDATE "BusinessPartner" SET "displayName" = 'Alterato' WHERE id = '${partnerId}';`))
+      .rejects.toThrow(/immutabile/i);
+    await expect(database.exec(`DELETE FROM "BusinessPartner" WHERE id = '${partnerId}';`))
+      .rejects.toThrow(/immutabile/i);
   });
 });

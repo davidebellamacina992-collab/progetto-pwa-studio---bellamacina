@@ -76,7 +76,17 @@ Un oggetto finalizzato non e modificabile. Per correggerlo si crea una rettifica
 
 Apri **Registro di audit** per cercare eventi per data, utente, azienda, azione o oggetto. Il registro documenta anche i valori prima/dopo e la motivazione. Gli eventi non possono essere modificati o eliminati dall'interfaccia.
 
+## Anagrafiche clienti e fornitori
+
+Aprire **Anagrafiche** dal menu, scegliere il tipo e indicare denominazione, Paese e almeno uno tra codice fiscale e partita IVA. Il pulsante **Salva come bozza** non rende operativo il dato.
+
+Dalla scheda appena creata scegliere **Invia alla revisione**. Un responsabile apre la richiesta in **Approvazioni**, controlla i dati e puo approvare oppure respingere con motivazione. L'approvazione non coincide con la finalizzazione: il responsabile deve effettuare un secondo passaggio esplicito digitando `FINALIZZO`. Se l'azienda richiede quattro occhi, servono due approvatori distinti.
+
+Una anagrafica finalizzata e immutabile. In caso di errore non si corregge il dato storico: si prepara una nuova versione, quando il relativo flusso sara disponibile.
+
+> Le valutazioni fiscali e civilistiche rilevanti devono essere validate dal commercialista.
+
 ## Moduli successivi
 
-Selezione del piano operativo, anagrafiche, documenti, prima nota, banche, IVA, personale, cespiti, chiusure, bilancio e controllo di gestione saranno aggiunti negli incrementi successivi e useranno lo stesso flusso di approvazione.
+Selezione del piano operativo, saldi iniziali, documenti, prima nota, banche, IVA, personale, cespiti, chiusure, bilancio e controllo di gestione saranno aggiunti negli incrementi successivi e useranno lo stesso flusso di approvazione.
 

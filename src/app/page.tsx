@@ -5,10 +5,17 @@ import { StatusBadge } from "@/components/status-badge";
 import { requirePageSession } from "@/lib/page-auth";
 import { db } from "@/lib/db";
 import { onboardingProgress } from "@/lib/onboarding";
+import { WorkStatus } from "@prisma/client";
 
 export default async function DashboardPage() {
   const context = await requirePageSession();
-  const onboarding = await db.companyOnboarding.findUnique({ where: { companyId: context.companyId } });
+  const [onboarding, approvalsToReview, draftPartners] = await Promise.all([
+    db.companyOnboarding.findUnique({ where: { companyId: context.companyId } }),
+    db.approvalRequest.count({
+      where: { companyId: context.companyId, status: { in: [WorkStatus.PENDING_APPROVAL, WorkStatus.PARTIALLY_APPROVED] } }
+    }),
+    db.businessPartner.count({ where: { companyId: context.companyId, status: WorkStatus.DRAFT } })
+  ]);
   const setupProgress = onboarding ? onboardingProgress(onboarding) : 0;
   return (
     <AppShell currentPath="/">
@@ -26,12 +33,12 @@ export default async function DashboardPage() {
       <section className="metricGrid" aria-label="Riepilogo attività">
         <Link className="metricCard emphasis" href="/approvazioni">
           <span className="metricIcon" aria-hidden="true">✓</span>
-          <span><strong>0</strong><small>Da approvare</small></span>
+          <span><strong>{approvalsToReview}</strong><small>Da approvare</small></span>
           <span aria-hidden="true">→</span>
         </Link>
         <article className="metricCard">
           <span className="metricIcon amber" aria-hidden="true">!</span>
-          <span><strong>0</strong><small>Anomalie aperte</small></span>
+          <span><strong>{draftPartners}</strong><small>Anagrafiche in bozza</small></span>
         </article>
         <article className="metricCard">
           <span className="metricIcon blue" aria-hidden="true">◷</span>
