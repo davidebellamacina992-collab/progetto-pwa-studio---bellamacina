@@ -43,7 +43,11 @@ Un operatore o amministratore puo selezionare **Invia alla revisione**. Il piano
 
 Se il piano viene respinto, correggi il CSV e caricalo come nuova bozza. La richiesta respinta resta invariata nel registro.
 
-Dopo l'approvazione il responsabile deve eseguire separatamente la finalizzazione digitando **FINALIZZO**. Solo allora il piano diventa immutabile. La finalizzazione non lo collega ancora automaticamente alle registrazioni contabili.
+Dopo l'approvazione il responsabile deve eseguire separatamente la finalizzazione digitando **FINALIZZO**. Solo allora il piano diventa immutabile.
+
+### Selezionare il piano operativo
+
+Dopo aver finalizzato almeno un piano, apri **Piano dei conti** e scegli **Proponi come operativo**. La proposta nasce come bozza: inviala alla revisione e attendi approvazione e finalizzazione. La piattaforma considera operativo soltanto il piano dell'ultima selezione finalizzata e conserva le selezioni precedenti nello storico immutabile.
 
 ## Creare una richiesta
 

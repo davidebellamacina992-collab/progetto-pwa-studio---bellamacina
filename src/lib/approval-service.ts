@@ -91,6 +91,22 @@ function snapshotBusinessPartner(partner: {
   };
 }
 
+function snapshotChartSelection(selection: {
+  id: string;
+  chartImportId: string;
+  version: number;
+  chartImport: { sourceFileName: string; fileHash: string; rowCount: number };
+}) {
+  return {
+    id: selection.id,
+    chartImportId: selection.chartImportId,
+    version: selection.version,
+    sourceFileName: selection.chartImport.sourceFileName,
+    fileHash: selection.chartImport.fileHash,
+    rowCount: selection.chartImport.rowCount
+  };
+}
+
 function assertBalanced(lines: Array<{ debitCents: bigint; creditCents: bigint }>) {
   const debit = lines.reduce((sum, line) => sum + line.debitCents, 0n);
   const credit = lines.reduce((sum, line) => sum + line.creditCents, 0n);
@@ -261,6 +277,61 @@ export async function requestBusinessPartnerApproval(
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 }
 
+export async function requestChartSelectionApproval(
+  context: SessionContext,
+  chartSelectionId: string,
+  ipAddress?: string | null
+) {
+  assertRole(context, [Role.OPERATOR, Role.ADMIN]);
+  return db.$transaction(async (tx) => {
+    const selection = await tx.chartSelection.findFirst({
+      where: { id: chartSelectionId, companyId: context.companyId },
+      include: { chartImport: true, company: true }
+    });
+    if (!selection) throw new AppError("NOT_FOUND", "Selezione del piano operativo non trovata.", 404);
+    if (selection.status !== WorkStatus.DRAFT) {
+      throw new AppError("INVALID_STATE", "La selezione e gia in revisione o conclusa.", 409);
+    }
+    if (selection.chartImport.status !== WorkStatus.FINALIZED || selection.chartImport.companyId !== context.companyId) {
+      throw new AppError("INVALID_CHART", "Il piano scelto non e finalizzato per questa azienda.", 409);
+    }
+    const snapshot = snapshotChartSelection(selection);
+    const hash = objectHash(snapshot);
+    const approval = await tx.approvalRequest.create({
+      data: {
+        companyId: context.companyId,
+        chartSelectionId: selection.id,
+        objectType: "CHART_SELECTION",
+        objectVersion: selection.version,
+        objectHash: hash,
+        requestedById: context.userId,
+        requiresStrongConfirm: selection.company.strongApprovalRequired,
+        requiresSecondApproval: selection.company.fourEyesRequired,
+        snapshot: json(snapshot),
+        diff: json({ from: selection.status, to: WorkStatus.PENDING_APPROVAL }),
+        anomalies: json([])
+      }
+    });
+    const changed = await tx.chartSelection.updateMany({
+      where: { id: selection.id, companyId: context.companyId, version: selection.version, status: WorkStatus.DRAFT },
+      data: { status: WorkStatus.PENDING_APPROVAL }
+    });
+    if (changed.count !== 1) throw new AppError("CONCURRENT_UPDATE", "La selezione e cambiata: ricarica la pagina.", 409);
+    await appendAudit(tx, {
+      companyId: context.companyId,
+      actorId: context.userId,
+      eventType: "CHART_SELECTION_APPROVAL_REQUESTED",
+      entityType: "ApprovalRequest",
+      entityId: approval.id,
+      beforeValue: json({ status: WorkStatus.DRAFT }),
+      afterValue: json({ status: WorkStatus.PENDING_APPROVAL, objectHash: hash }),
+      ipAddress,
+      correlationId: randomUUID()
+    });
+    return approval;
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+}
+
 export async function approveRequest(
   context: SessionContext,
   approvalId: string,
@@ -275,7 +346,8 @@ export async function approveRequest(
         decisions: true,
         draft: { include: { lines: true } },
         chartImport: { include: { lines: { orderBy: { position: "asc" } } } },
-        businessPartner: true
+        businessPartner: true,
+        chartSelection: { include: { chartImport: true } }
       }
     });
     if (!approval) throw new AppError("NOT_FOUND", "Richiesta non trovata.", 404);
@@ -283,13 +355,17 @@ export async function approveRequest(
       ? approval.chartImport
       : approval.objectType === "BUSINESS_PARTNER"
         ? approval.businessPartner
-        : approval.draft;
+        : approval.objectType === "CHART_SELECTION"
+          ? approval.chartSelection
+          : approval.draft;
     if (!target) throw new AppError("INVALID_APPROVAL_TARGET", "La richiesta non ha un oggetto valido.", 409);
     const currentSnapshot = approval.objectType === "CHART_IMPORT"
       ? snapshotChartImport(approval.chartImport!)
       : approval.objectType === "BUSINESS_PARTNER"
         ? snapshotBusinessPartner(approval.businessPartner!)
-        : snapshotDraft(approval.draft!);
+        : approval.objectType === "CHART_SELECTION"
+          ? snapshotChartSelection(approval.chartSelection!)
+          : snapshotDraft(approval.draft!);
     if (target.version !== approval.objectVersion || objectHash(currentSnapshot) !== approval.objectHash) {
       throw new AppError("STALE_APPROVAL", "La bozza e cambiata: occorre una nuova revisione.", 409);
     }
@@ -326,6 +402,11 @@ export async function approveRequest(
     } else if (approval.objectType === "BUSINESS_PARTNER" && approval.businessPartnerId) {
       targetChanged = await tx.businessPartner.updateMany({
         where: { id: approval.businessPartnerId, companyId: context.companyId, version: approval.objectVersion },
+        data: { status: nextStatus }
+      });
+    } else if (approval.objectType === "CHART_SELECTION" && approval.chartSelectionId) {
+      targetChanged = await tx.chartSelection.updateMany({
+        where: { id: approval.chartSelectionId, companyId: context.companyId, version: approval.objectVersion },
         data: { status: nextStatus }
       });
     } else if (approval.draftId) {
@@ -387,6 +468,11 @@ export async function rejectRequest(
         where: { id: approval.businessPartnerId, companyId: context.companyId },
         data: { status: WorkStatus.REJECTED }
       });
+    } else if (approval.objectType === "CHART_SELECTION" && approval.chartSelectionId) {
+      targetChanged = await tx.chartSelection.updateMany({
+        where: { id: approval.chartSelectionId, companyId: context.companyId },
+        data: { status: WorkStatus.REJECTED }
+      });
     } else if (approval.draftId) {
       targetChanged = await tx.accountingDraft.updateMany({
         where: { id: approval.draftId, companyId: context.companyId },
@@ -423,7 +509,8 @@ export async function finalizeRequest(
       include: {
         draft: { include: { lines: true } },
         chartImport: { include: { lines: { orderBy: { position: "asc" } } } },
-        businessPartner: true
+        businessPartner: true,
+        chartSelection: { include: { chartImport: true } }
       }
     });
     if (!approval) throw new AppError("NOT_FOUND", "Richiesta non trovata.", 404);
@@ -432,13 +519,17 @@ export async function finalizeRequest(
       ? approval.chartImport
       : approval.objectType === "BUSINESS_PARTNER"
         ? approval.businessPartner
-        : approval.draft;
+        : approval.objectType === "CHART_SELECTION"
+          ? approval.chartSelection
+          : approval.draft;
     if (!target) throw new AppError("INVALID_APPROVAL_TARGET", "La richiesta non ha un oggetto valido.", 409);
     const currentSnapshot = approval.objectType === "CHART_IMPORT"
       ? snapshotChartImport(approval.chartImport!)
       : approval.objectType === "BUSINESS_PARTNER"
         ? snapshotBusinessPartner(approval.businessPartner!)
-        : snapshotDraft(approval.draft!);
+        : approval.objectType === "CHART_SELECTION"
+          ? snapshotChartSelection(approval.chartSelection!)
+          : snapshotDraft(approval.draft!);
     if (target.version !== approval.objectVersion || objectHash(currentSnapshot) !== approval.objectHash) {
       throw new AppError("STALE_APPROVAL", "L'approvazione non corrisponde piu alla bozza corrente.", 409);
     }
@@ -473,6 +564,19 @@ export async function finalizeRequest(
       entityType = "BusinessPartner";
       entityId = approval.businessPartnerId;
       eventType = "BUSINESS_PARTNER_FINALIZED";
+    } else if (approval.objectType === "CHART_SELECTION" && approval.chartSelectionId && approval.chartSelection) {
+      changed = await tx.chartSelection.updateMany({
+        where: {
+          id: approval.chartSelectionId,
+          companyId: context.companyId,
+          version: approval.objectVersion,
+          status: WorkStatus.APPROVED
+        },
+        data: { status: WorkStatus.FINALIZED, finalizedAt: now }
+      });
+      entityType = "ChartSelection";
+      entityId = approval.chartSelectionId;
+      eventType = "CHART_SELECTION_FINALIZED";
     } else if (approval.draftId && approval.draft) {
       assertBalanced(approval.draft.lines);
       changed = await tx.accountingDraft.updateMany({

@@ -10,6 +10,7 @@ const chartApprovalMigration = readFileSync(resolve("prisma/migrations/202610260
 const businessPartnerMigration = readFileSync(resolve("prisma/migrations/202610280001_phase2_business_partners/migration.sql"), "utf8");
 const openingBalancesMigration = readFileSync(resolve("prisma/migrations/202610280002_phase2_opening_balances/migration.sql"), "utf8");
 const accountingDraftGateMigration = readFileSync(resolve("prisma/migrations/202610280003_accounting_draft_approval_gate/migration.sql"), "utf8");
+const operationalChartMigration = readFileSync(resolve("prisma/migrations/202610280004_phase2_operational_chart/migration.sql"), "utf8");
 let database: PGlite;
 
 const companyId = "00000000-0000-4000-8000-000000000001";
@@ -36,6 +37,7 @@ describe("migrazione PostgreSQL eseguibile", () => {
     await database.exec(businessPartnerMigration);
     await database.exec(openingBalancesMigration);
     await database.exec(accountingDraftGateMigration);
+    await database.exec(operationalChartMigration);
   });
 
   it("blocca la finalizzazione di una scrittura non quadrata", async () => {
@@ -209,5 +211,34 @@ describe("migrazione PostgreSQL eseguibile", () => {
       INSERT INTO "AccountingDraft" (id, "companyId", description, "createdById", "sourceType", "sourceFileName", "sourceFileHash", "sourceChartImportId", "updatedAt")
         VALUES ('00000000-0000-4000-8000-000000000021', '${companyId}', 'Duplicato', '${userId}', 'OPENING_BALANCE_CSV', 'duplicato.csv', '${"a".repeat(64)}', '00000000-0000-4000-8000-000000000020', now());
     `)).rejects.toThrow();
+  });
+
+  it("attiva un piano operativo soltanto con piano finalizzato e approvazione valida", async () => {
+    const chartId = "00000000-0000-4000-8000-000000000030";
+    const selectionId = "00000000-0000-4000-8000-000000000031";
+    const approvalId = "00000000-0000-4000-8000-000000000032";
+    await database.exec(`
+      INSERT INTO "Company" (id, name, "updatedAt") VALUES ('${companyId}', 'Azienda test isolata', now());
+      INSERT INTO "User" (id, email, "passwordHash", "displayName", "updatedAt")
+        VALUES ('${userId}', 'utente@example.test', 'hash-fittizio', 'Utente fittizio', now());
+      INSERT INTO "ChartImport" (id, "companyId", "sourceFileName", "fileHash", "rowCount", "createdById", status, "finalizedAt", "updatedAt")
+        VALUES ('${chartId}', '${companyId}', 'piano-fittizio.csv', 'hash-operativo', 1, '${userId}', 'FINALIZED', now(), now());
+      INSERT INTO "ChartSelection" (id, "companyId", "chartImportId", "createdById", "updatedAt")
+        VALUES ('${selectionId}', '${companyId}', '${chartId}', '${userId}', now());
+    `);
+    await expect(database.exec(`UPDATE "ChartSelection" SET status = 'FINALIZED', "finalizedAt" = now() WHERE id = '${selectionId}';`))
+      .rejects.toThrow(/transizione|approvazione/i);
+    await database.exec(`
+      INSERT INTO "ApprovalRequest" (id, "companyId", "chartSelectionId", "objectType", "objectVersion", "objectHash", "requestedById", snapshot, diff, anomalies, "updatedAt")
+        VALUES ('${approvalId}', '${companyId}', '${selectionId}', 'CHART_SELECTION', 1, 'hash-selezione', '${userId}', '{}', '{}', '[]', now());
+      INSERT INTO "ApprovalDecision" (id, "approvalRequestId", "actorId", decision, "observedHash")
+        VALUES ('00000000-0000-4000-8000-000000000033', '${approvalId}', '${userId}', 'APPROVE', 'hash-selezione');
+      UPDATE "ApprovalRequest" SET status = 'APPROVED' WHERE id = '${approvalId}';
+      UPDATE "ChartSelection" SET status = 'PENDING_APPROVAL' WHERE id = '${selectionId}';
+      UPDATE "ChartSelection" SET status = 'APPROVED' WHERE id = '${selectionId}';
+      UPDATE "ChartSelection" SET status = 'FINALIZED', "finalizedAt" = now() WHERE id = '${selectionId}';
+    `);
+    await expect(database.exec(`UPDATE "ChartSelection" SET version = 2 WHERE id = '${selectionId}';`))
+      .rejects.toThrow(/immutabile/i);
   });
 });

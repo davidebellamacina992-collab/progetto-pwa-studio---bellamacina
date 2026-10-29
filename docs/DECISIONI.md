@@ -108,11 +108,17 @@
 
 **Motivazione:** il controllo applicativo non basta contro chiamate o accessi diretti al database. Piano dei conti, anagrafiche e scritture devono offrire la stessa difesa in profondita.
 
+## D-019 - Selezione operativa versionata e append-only
+
+**Decisione:** rappresentare la scelta del piano dei conti operativo con `ChartSelection`. Ogni scelta nasce in bozza, punta a un piano finalizzato della stessa azienda e attraversa il motore di approvazione; il piano corrente e l'ultima selezione finalizzata.
+
+**Motivazione:** un semplice campo modificabile sull'azienda permetterebbe di sostituire una configurazione contabile senza conservare la decisione precedente. Una sequenza di selezioni immutabili mantiene storia, approvatori, hash e audit e consente correzioni soltanto tramite una nuova proposta.
+
 ## Registro di fase
 
 La Fase 1 stabilisce le fondamenta. Le decisioni su OCR, storage, coda e formati di export saranno finalizzate nelle fasi che introducono tali funzioni.
 
-La Fase 2 comprende ora il profilo aziendale guidato, piano dei conti, anagrafiche e saldi iniziali fino alla finalizzazione umana.
+La Fase 2 comprende ora il profilo aziendale guidato, piano dei conti, selezione operativa, anagrafiche e saldi iniziali fino alla finalizzazione umana.
 
 ## Verifiche del 23 ottobre 2026
 

@@ -33,9 +33,10 @@ Il selettore azienda salva nel cookie `HttpOnly` soltanto un identificativo gia 
 
 - `CompanyOnboarding`: configurazione dichiarata e versionata, senza attivazione fiscale implicita.
 - `ChartImport` e `ChartAccountDraftLine`: piano dei conti validato, revisionabile e immutabile dopo la finalizzazione.
+- `ChartSelection`: scelta versionata del piano operativo; l'ultima selezione finalizzata e quella corrente.
 - `BusinessPartner`: cliente, fornitore o soggetto misto; identificativi unici per azienda, stato versionato e finalizzazione protetta.
 - `AccountingDraft` di tipo sorgente `OPENING_BALANCE_CSV`: scrittura di apertura quadrata, con hash file e riferimento al piano finalizzato.
-- `ApprovalRequest`: riferimento esclusivo verificato dal database verso scrittura, piano dei conti oppure anagrafica.
+- `ApprovalRequest`: riferimento esclusivo verificato dal database verso scrittura, piano dei conti, selezione operativa oppure anagrafica.
 
 ## Invarianti
 

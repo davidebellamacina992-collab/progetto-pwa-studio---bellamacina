@@ -23,11 +23,22 @@ export type ChartImportView = {
   }>;
 };
 
+export type ChartSelectionView = {
+  id: string;
+  status: string;
+  createdAt: string;
+  finalizedAt: string | null;
+  approvalId: string | null;
+  chartImport: { id: string; sourceFileName: string; fileHash: string; rowCount: number };
+};
+
 export function ChartImporter({
   imports,
+  selections,
   canEdit
 }: {
   imports: ChartImportView[];
+  selections: ChartSelectionView[];
   canEdit: boolean;
 }) {
   const router = useRouter();
@@ -36,6 +47,7 @@ export function ChartImporter({
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [reviewingId, setReviewingId] = useState("");
+  const [selectionBusyId, setSelectionBusyId] = useState("");
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -81,6 +93,44 @@ export function ChartImporter({
     }
   }
 
+  async function createSelection(chartImportId: string) {
+    setSelectionBusyId(chartImportId);
+    setError("");
+    setSuccess("");
+    try {
+      const response = await fetch("/api/chart-selections", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chartImportId })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.message ?? "Creazione della selezione non riuscita.");
+      setSuccess("Selezione preparata come bozza. Ora puoi inviarla alla revisione umana.");
+      router.refresh();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Creazione della selezione non riuscita.");
+    } finally {
+      setSelectionBusyId("");
+    }
+  }
+
+  async function requestSelectionReview(selectionId: string) {
+    setSelectionBusyId(selectionId);
+    setError("");
+    setSuccess("");
+    try {
+      const response = await fetch("/api/chart-selections/" + encodeURIComponent(selectionId) + "/request-approval", { method: "POST" });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.message ?? "Invio alla revisione non riuscito.");
+      setSuccess("Selezione del piano operativo inviata alla revisione umana.");
+      router.refresh();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Invio alla revisione non riuscito.");
+    } finally {
+      setSelectionBusyId("");
+    }
+  }
+
   function statusView(status: string) {
     if (status === "PENDING_APPROVAL" || status === "PARTIALLY_APPROVED") return { label: "Da approvare", tone: "warning" as const };
     if (status === "APPROVED") return { label: "Approvato", tone: "info" as const };
@@ -89,8 +139,49 @@ export function ChartImporter({
     return { label: "Bozza", tone: "warning" as const };
   }
 
+  const activeSelection = selections
+    .filter((item) => item.status === "FINALIZED")
+    .sort((left, right) => new Date(right.finalizedAt ?? 0).getTime() - new Date(left.finalizedAt ?? 0).getTime())[0];
+  const hasOpenSelection = selections.some((item) => ["DRAFT", "PENDING_APPROVAL", "PARTIALLY_APPROVED", "APPROVED"].includes(item.status));
+
   return (
     <div className="chartLayout">
+      <section className="panel" aria-labelledby="operational-chart-title">
+        <div className="panelHeader">
+          <div>
+            <span className="eyebrow">Configurazione operativa</span>
+            <h2 id="operational-chart-title">Piano dei conti operativo</h2>
+          </div>
+          <StatusBadge tone={selections.some((item) => item.status === "FINALIZED") ? "success" : "warning"}>
+            {selections.some((item) => item.status === "FINALIZED") ? "Configurato" : "Da configurare"}
+          </StatusBadge>
+        </div>
+        <p className="mutedText">La versione operativa è l’ultima selezione finalizzata. Cambiarla richiede sempre revisione, approvazione e finalizzazione separate.</p>
+        {selections.length ? (
+          <div className="chartImportActions">
+            {selections.map((selection) => (
+              <div className="formNotice" key={selection.id}>
+                <strong>{selection.chartImport.sourceFileName}</strong> · {selection.chartImport.rowCount} conti · {statusView(selection.status).label}
+                {selection.id === activeSelection?.id ? " · Operativo" : ""}
+                <div className="chartImportActions">
+                  {selection.status === "DRAFT" && canEdit ? (
+                    <button className="button primary" type="button" disabled={selectionBusyId === selection.id} onClick={() => requestSelectionReview(selection.id)}>
+                      {selectionBusyId === selection.id ? "Invio in corso…" : "Invia selezione alla revisione"}
+                    </button>
+                  ) : null}
+                  {selection.approvalId ? <Link className="button secondary" href={"/approvazioni/" + selection.approvalId}>Apri revisione</Link> : null}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : <p className="emptyInline">Nessun piano operativo selezionato.</p>}
+        {canEdit ? imports.filter((item) => item.status === "FINALIZED" && item.id !== activeSelection?.chartImport.id).map((item) => (
+          <button className="button secondary" type="button" key={item.id} disabled={selectionBusyId !== "" || hasOpenSelection} onClick={() => createSelection(item.id)}>
+            {selectionBusyId === item.id ? "Preparazione…" : hasOpenSelection ? "Concludi prima la selezione in corso" : "Proponi “" + item.sourceFileName + "” come operativo"}
+          </button>
+        )) : null}
+      </section>
+
       <section className="panel" aria-labelledby="chart-upload-title">
         <span className="eyebrow">Importazione controllata</span>
         <h2 id="chart-upload-title">Carica un piano dei conti</h2>

@@ -43,7 +43,8 @@ export async function GET(_request: Request, routeContext: { params: Promise<{ i
         requestedBy: { select: { displayName: true } },
         draft: { select: { description: true } },
         chartImport: { select: { sourceFileName: true } },
-        businessPartner: { select: { displayName: true } }
+        businessPartner: { select: { displayName: true } },
+        chartSelection: { include: { chartImport: { select: { sourceFileName: true } } } }
       }
     });
     if (!item) throw new AppError("NOT_FOUND", "Richiesta non trovata.", 404);
@@ -56,6 +57,7 @@ export async function GET(_request: Request, routeContext: { params: Promise<{ i
     const lineSummary = snapshot.lines?.map((line) => `${line.accountCode} · D ${line.debitCents} / A ${line.creditCents}`).join("; ") ?? null;
     const isChartImport = item.objectType === "CHART_IMPORT";
     const isBusinessPartner = item.objectType === "BUSINESS_PARTNER";
+    const isChartSelection = item.objectType === "CHART_SELECTION";
     const chartLineSummary = snapshot.lines?.slice(0, 20)
       .map((line) => (line.code ?? "—") + " · " + (line.name ?? "—"))
       .join("; ") ?? null;
@@ -65,13 +67,17 @@ export async function GET(_request: Request, routeContext: { params: Promise<{ i
         ? "Piano dei conti · " + (item.chartImport?.sourceFileName ?? snapshot.sourceFileName ?? "Importazione")
         : isBusinessPartner
           ? "Anagrafica · " + (item.businessPartner?.displayName ?? snapshot.displayName ?? "Cliente o fornitore")
-          : (item.draft?.description ?? snapshot.description ?? "Scrittura contabile"),
+          : isChartSelection
+            ? "Piano operativo · " + (item.chartSelection?.chartImport.sourceFileName ?? snapshot.sourceFileName ?? "Selezione")
+            : (item.draft?.description ?? snapshot.description ?? "Scrittura contabile"),
       description: isChartImport
         ? "L'importazione sara revisionata; la finalizzazione immutabile resta un passaggio separato e tracciato."
         : isBusinessPartner
           ? "I dati identificativi saranno revisionati; la finalizzazione li rende immutabili e resta separata dall'approvazione."
-          : "La bozza sara approvata; la finalizzazione resta un passaggio separato e tracciato.",
-      objectType: isChartImport ? "Piano dei conti" : isBusinessPartner ? "Anagrafica" : "Scrittura contabile",
+          : isChartSelection
+            ? "Il piano diventera operativo soltanto dopo approvazione e finalizzazione separate e tracciate."
+            : "La bozza sara approvata; la finalizzazione resta un passaggio separato e tracciato.",
+      objectType: isChartImport ? "Piano dei conti" : isBusinessPartner ? "Anagrafica" : isChartSelection ? "Piano operativo" : "Scrittura contabile",
       status: uiStatus(item.status),
       requestedBy: item.requestedBy.displayName,
       requestedAt: item.createdAt.toISOString(),
@@ -81,13 +87,15 @@ export async function GET(_request: Request, routeContext: { params: Promise<{ i
       changes: [
         { field: "Stato", before: "Bozza", after: uiStatus(item.status) },
         {
-          field: isChartImport ? "Conti importati" : isBusinessPartner ? "Dati identificativi" : "Righe contabili (importi in centesimi)",
+          field: isChartImport ? "Conti importati" : isBusinessPartner ? "Dati identificativi" : isChartSelection ? "Piano selezionato" : "Righe contabili (importi in centesimi)",
           before: null,
           after: isChartImport && snapshot.rowCount
             ? snapshot.rowCount + " righe · " + chartLineSummary
             : isBusinessPartner
               ? [snapshot.kind, snapshot.taxCode, snapshot.vatNumber, snapshot.email, snapshot.countryCode].filter(Boolean).join(" · ")
-              : lineSummary
+              : isChartSelection
+                ? [snapshot.sourceFileName, snapshot.rowCount ? snapshot.rowCount + " conti" : null, snapshot.fileHash].filter(Boolean).join(" · ")
+                : lineSummary
         }
       ],
       anomalies

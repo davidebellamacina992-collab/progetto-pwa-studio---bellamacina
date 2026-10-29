@@ -74,6 +74,7 @@ model User {
   onboardingUpdates   CompanyOnboarding[] @relation("OnboardingUpdatedBy")
   chartImports        ChartImport[]       @relation("ChartImportCreatedBy")
   businessPartners    BusinessPartner[]   @relation("BusinessPartnerCreatedBy")
+  chartSelections     ChartSelection[]    @relation("ChartSelectionCreatedBy")
 }
 
 model Company {
@@ -92,6 +93,7 @@ model Company {
   onboarding             CompanyOnboarding?
   chartImports           ChartImport[]
   businessPartners       BusinessPartner[]
+  chartSelections        ChartSelection[]
 }
 
 model BusinessPartner {
@@ -138,9 +140,29 @@ model ChartImport {
   lines          ChartAccountDraftLine[]
   approvals      ApprovalRequest[]
   openingBalanceDrafts AccountingDraft[] @relation("OpeningBalanceChart")
+  operationalSelections ChartSelection[]
 
   @@unique([companyId, fileHash])
   @@index([companyId, status])
+}
+
+model ChartSelection {
+  id            String            @id @default(uuid()) @db.Uuid
+  companyId     String            @db.Uuid
+  chartImportId String            @db.Uuid
+  status        WorkStatus        @default(DRAFT)
+  version       Int               @default(1)
+  createdById   String            @db.Uuid
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  finalizedAt   DateTime?
+  company       Company           @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  chartImport   ChartImport       @relation(fields: [chartImportId], references: [id], onDelete: Restrict)
+  createdBy     User              @relation("ChartSelectionCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  approvals     ApprovalRequest[]
+
+  @@index([companyId, status, finalizedAt])
+  @@index([chartImportId])
 }
 
 model ChartAccountDraftLine {
@@ -253,6 +275,7 @@ model ApprovalRequest {
   draftId                String?            @db.Uuid
   chartImportId          String?            @db.Uuid
   businessPartnerId      String?            @db.Uuid
+  chartSelectionId       String?            @db.Uuid
   objectType             String
   objectVersion          Int
   objectHash             String
@@ -272,12 +295,14 @@ model ApprovalRequest {
   draft                  AccountingDraft?   @relation(fields: [draftId], references: [id], onDelete: Restrict)
   chartImport            ChartImport?       @relation(fields: [chartImportId], references: [id], onDelete: Restrict)
   businessPartner        BusinessPartner?   @relation(fields: [businessPartnerId], references: [id], onDelete: Restrict)
+  chartSelection         ChartSelection?    @relation(fields: [chartSelectionId], references: [id], onDelete: Restrict)
   requestedBy            User               @relation("RequestedBy", fields: [requestedById], references: [id], onDelete: Restrict)
   decisions              ApprovalDecision[]
 
   @@unique([draftId, objectVersion])
   @@unique([chartImportId, objectVersion])
   @@unique([businessPartnerId, objectVersion])
+  @@unique([chartSelectionId, objectVersion])
   @@index([companyId, status])
 }
 

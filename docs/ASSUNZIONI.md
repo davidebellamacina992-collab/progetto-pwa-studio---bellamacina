@@ -23,19 +23,20 @@ Le assunzioni sono scelte prudenziali e sostituibili; non sono requisiti fiscali
 1. Operatori e amministratori possono compilare la bozza di onboarding; responsabili e commercialisti la consultano senza modificarla.
 2. Il regime contabile viene raccolto come testo dichiarato dall'azienda. Non e una regola fiscale applicativa e non alimenta calcoli finche non sara associato a una regola versionata e approvata.
 3. Il raggiungimento del 100% significa soltanto “pronta per la revisione”. La validazione professionale e l'attivazione restano passaggi distinti.
-4. Piano dei conti e saldi iniziali vengono indicati nel wizard come disponibili o mancanti. Il piano dei conti si carica in una pagina separata; i saldi iniziali non sono ancora importabili.
+4. Piano dei conti e saldi iniziali vengono indicati nel wizard come disponibili o mancanti e si importano in pagine separate, sempre come bozze controllate.
 5. Il tracciato iniziale del piano dei conti e CSV UTF-8 con separatore virgola o punto e virgola. Codice e nome sono obbligatori; tipo e codice padre sono facoltativi.
 6. Il limite prudenziale e 2 MiB e 5.000 conti per file. Il file originale non viene conservato: sono persistiti hash, metadati minimi e righe validate.
 7. Due file con lo stesso contenuto non possono essere caricati due volte nella stessa azienda; lo stesso contenuto resta consentito in aziende diverse.
 8. Un import del piano dei conti resta non utilizzabile durante bozza, revisione e approvazione. La finalizzazione richiede un'azione separata del responsabile e lo rende immutabile.
-9. In questa fase possono esistere piu piani finalizzati per la stessa azienda, ma nessun modulo contabile li usa ancora come piano attivo. La selezione della versione operativa sara introdotta insieme alle registrazioni.
+9. Possono esistere piu piani finalizzati per la stessa azienda. Il piano operativo e determinato dall'ultima selezione finalizzata; ogni sostituzione crea una nuova selezione versionata e lascia immutabile lo storico.
 10. Un piano respinto non viene riaperto: l'operatore corregge il file e crea una nuova bozza, preservando integralmente richiesta e decisione precedenti.
 11. Una anagrafica deve contenere almeno un identificativo tra codice fiscale e partita IVA. Gli identificativi sono normalizzati in maiuscolo e univoci nella singola azienda, non globalmente.
 12. In questo incremento non vengono verificate banche dati esterne e non viene attribuita validita fiscale agli identificativi: il responsabile ne conferma la correttezza durante la revisione.
 13. Una anagrafica respinta o finalizzata non viene sovrascritta. Le correzioni saranno introdotte come nuova versione collegata all'originale prima che documenti e registrazioni inizino a referenziarla.
 14. Il tracciato dei saldi iniziali usa `codice, descrizione, dare, avere`; ogni conto compare una sola volta e valorizza un solo lato. Non sono ammessi importi negativi: la posizione contabile e espressa dal lato Dare/Avere.
-15. I saldi possono riferirsi soltanto a un piano dei conti gia finalizzato della stessa azienda. La scelta per il singolo import non equivale ancora alla selezione globale del piano operativo.
+15. I saldi possono riferirsi soltanto a un piano dei conti gia finalizzato della stessa azienda. La provenienza del singolo import resta distinta dalla selezione globale del piano operativo.
 16. L'azienda creata dal seed di sviluppo disattiva il TOTP per consentire una demo immediata con due supervisori fittizi; questa eccezione non e disponibile in produzione.
+17. Puo esistere una sola selezione del piano operativo non conclusa per azienda. Una nuova proposta e consentita dopo finalizzazione o rifiuto della precedente.
 
 ## Da validare prima della produzione
 
