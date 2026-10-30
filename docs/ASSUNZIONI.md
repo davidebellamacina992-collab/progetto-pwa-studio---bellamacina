@@ -38,6 +38,15 @@ Le assunzioni sono scelte prudenziali e sostituibili; non sono requisiti fiscali
 16. L'azienda creata dal seed di sviluppo disattiva il TOTP per consentire una demo immediata con due supervisori fittizi; questa eccezione non e disponibile in produzione.
 17. Puo esistere una sola selezione del piano operativo non conclusa per azienda. Una nuova proposta e consentita dopo finalizzazione o rifiuto della precedente.
 
+## Fase 3
+
+1. Il primo formato documentale supportato e XML FatturaPA non firmato e codificato UTF-8. File `.p7m`, PDF e immagini richiederanno pipeline dedicate e non vengono interpretati come XML.
+2. Il limite prudenziale iniziale e 10 MiB per file. DTD ed entita XML sono rifiutate per impedire letture esterne o espansioni pericolose.
+3. Gli importi con piu di due decimali significativi vengono respinti: non viene applicato un arrotondamento implicito. La futura regola di arrotondamento sara un dato versionato e approvato.
+4. Il totale differente da imponibile piu IVA genera un avviso, non una correzione, poiche ritenute, bollo e arrotondamenti possono spiegare la differenza.
+5. L'originale e conservato su storage locale configurabile e identificato da hash. Backup, cifratura a riposo e retention dipendono dall'ambiente e restano requisiti di produzione.
+6. La finalizzazione conferma esclusivamente il documento e i dati estratti osservati. Non crea scritture, scadenze, pagamenti o invii.
+
 ## Da validare prima della produzione
 
 - politica password e durata sessione;

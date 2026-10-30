@@ -3,6 +3,7 @@
 ## Ambito corrente
 
 La Fase 1 costruisce i servizi trasversali: identita, aziende, autorizzazioni, audit e approvazioni. La Fase 2 riusa questi confini per onboarding, piano dei conti e anagrafiche; nessun modulo puo finalizzare direttamente.
+La Fase 3 aggiunge documenti originali e dati estratti senza modificare il principio: l'estrazione produce una bozza e non una registrazione.
 
 ## Componenti
 
@@ -37,6 +38,8 @@ Il selettore azienda salva nel cookie `HttpOnly` soltanto un identificativo gia 
 - `BusinessPartner`: cliente, fornitore o soggetto misto; identificativi unici per azienda, stato versionato e finalizzazione protetta.
 - `AccountingDraft` di tipo sorgente `OPENING_BALANCE_CSV`: scrittura di apertura quadrata, con hash file e riferimento al piano finalizzato.
 - `ApprovalRequest`: riferimento esclusivo verificato dal database verso scrittura, piano dei conti, selezione operativa oppure anagrafica.
+- `AccountingDocument`: metadati, hash e chiave di archiviazione dell'originale, separati per azienda.
+- `DocumentExtraction`: valori FatturaPA in centesimi, affidabilita, anomalie e riferimenti ai campi XML di origine.
 
 ## Invarianti
 

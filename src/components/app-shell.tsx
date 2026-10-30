@@ -10,6 +10,7 @@ const navigation = [
   { href: "/piano-dei-conti", label: "Piano dei conti", icon: "▦" },
   { href: "/anagrafiche", label: "Anagrafiche", icon: "♙" },
   { href: "/saldi-iniziali", label: "Saldi iniziali", icon: "±" },
+  { href: "/documenti", label: "Documenti", icon: "▤" },
   { href: "/approvazioni", label: "Approvazioni", icon: "✓" },
   { href: "/audit", label: "Registro attività", icon: "≡" },
   { href: "/sicurezza", label: "Sicurezza account", icon: "◈" },

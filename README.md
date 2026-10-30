@@ -46,6 +46,16 @@ La **Fase 2 è in corso**. Sono disponibili sei incrementi verificabili:
 
 Gli altri dati di configurazione e gli import documentali saranno i prossimi incrementi verso la Fase 3.
 
+La **Fase 3 è iniziata** con un primo incremento verificabile:
+
+- caricamento di fatture elettroniche FatturaPA XML UTF-8 fino a 10 MiB;
+- rifiuto di DTD ed entita XML, controllo del tipo file e blocco dei duplicati per azienda;
+- conservazione locale dell'originale con hash SHA-256 e percorso separato per azienda;
+- estrazione deterministica di soggetti, numero, date, imponibile, IVA e totale;
+- importi conservati in centesimi interi, riferimenti ai campi XML e indicatore di affidabilita;
+- output esclusivamente in bozza, con anomalie visibili e gate umano completo prima della finalizzazione;
+- nessuna registrazione contabile, trasmissione o invio automatico.
+
 ## Avvio in 5 minuti con Docker
 
 Prerequisiti: Docker Desktop con Docker Compose.
@@ -108,7 +118,7 @@ npm run build
 
 I test E2E avviano l'app in modalita sviluppo e usano Google Chrome installato sul sistema. I flussi autenticati completi richiedono anche il database di test configurato in `.env`.
 
-Ultima verifica locale (28 ottobre 2026): typecheck e 72 test automatici superati; schema Prisma valido. Le otto migrazioni sono state eseguite realmente su PostgreSQL embedded (PGlite), inclusi gate di approvazione a livello database, immutabilita, provenienza dei saldi iniziali e selezione del piano operativo. La build e i test E2E vengono eseguiti anche dalla pipeline GitHub.
+Ultima verifica locale (29 ottobre 2026): lint, typecheck e 79 test automatici superati; schema Prisma valido. Le nove migrazioni sono state eseguite realmente su PostgreSQL embedded (PGlite), inclusi gate di approvazione a livello database, immutabilita, selezione del piano operativo e documenti FatturaPA. La build e i test E2E vengono eseguiti anche dalla pipeline GitHub.
 
 ## Principio operativo
 

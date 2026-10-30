@@ -55,6 +55,10 @@ enum PartnerKind {
   BOTH
 }
 
+enum DocumentKind {
+  FATTURA_PA_XML
+}
+
 model User {
   id                  String              @id @default(uuid()) @db.Uuid
   email               String              @unique
@@ -75,6 +79,7 @@ model User {
   chartImports        ChartImport[]       @relation("ChartImportCreatedBy")
   businessPartners    BusinessPartner[]   @relation("BusinessPartnerCreatedBy")
   chartSelections     ChartSelection[]    @relation("ChartSelectionCreatedBy")
+  accountingDocuments AccountingDocument[] @relation("AccountingDocumentCreatedBy")
 }
 
 model Company {
@@ -94,6 +99,7 @@ model Company {
   chartImports           ChartImport[]
   businessPartners       BusinessPartner[]
   chartSelections        ChartSelection[]
+  accountingDocuments    AccountingDocument[]
 }
 
 model BusinessPartner {
@@ -163,6 +169,50 @@ model ChartSelection {
 
   @@index([companyId, status, finalizedAt])
   @@index([chartImportId])
+}
+
+model AccountingDocument {
+  id             String              @id @default(uuid()) @db.Uuid
+  companyId      String              @db.Uuid
+  kind           DocumentKind
+  sourceFileName String              @db.VarChar(255)
+  mediaType      String              @db.VarChar(100)
+  fileHash       String              @db.VarChar(64)
+  byteSize       Int
+  storageKey     String              @db.VarChar(500)
+  status         WorkStatus          @default(DRAFT)
+  version        Int                 @default(1)
+  createdById    String              @db.Uuid
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  finalizedAt    DateTime?
+  company        Company             @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  createdBy      User                @relation("AccountingDocumentCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  extraction     DocumentExtraction?
+  approvals      ApprovalRequest[]
+
+  @@unique([companyId, fileHash])
+  @@index([companyId, status, createdAt])
+}
+
+model DocumentExtraction {
+  id                  String             @id @default(uuid()) @db.Uuid
+  documentId          String             @unique @db.Uuid
+  supplierName        String?            @db.VarChar(200)
+  supplierVatNumber   String?            @db.VarChar(20)
+  customerVatNumber   String?            @db.VarChar(20)
+  documentNumber      String?            @db.VarChar(50)
+  issueDate           DateTime?          @db.Date
+  currencyCode        String             @default("EUR") @db.VarChar(3)
+  taxableCents        BigInt?
+  vatCents            BigInt?
+  totalCents          BigInt?
+  dueDate             DateTime?          @db.Date
+  confidencePermille  Int
+  sourceReferences    Json
+  warnings            Json
+  createdAt           DateTime           @default(now())
+  document            AccountingDocument @relation(fields: [documentId], references: [id], onDelete: Restrict)
 }
 
 model ChartAccountDraftLine {
@@ -276,6 +326,7 @@ model ApprovalRequest {
   chartImportId          String?            @db.Uuid
   businessPartnerId      String?            @db.Uuid
   chartSelectionId       String?            @db.Uuid
+  accountingDocumentId   String?            @db.Uuid
   objectType             String
   objectVersion          Int
   objectHash             String
@@ -296,6 +347,7 @@ model ApprovalRequest {
   chartImport            ChartImport?       @relation(fields: [chartImportId], references: [id], onDelete: Restrict)
   businessPartner        BusinessPartner?   @relation(fields: [businessPartnerId], references: [id], onDelete: Restrict)
   chartSelection         ChartSelection?    @relation(fields: [chartSelectionId], references: [id], onDelete: Restrict)
+  accountingDocument     AccountingDocument? @relation(fields: [accountingDocumentId], references: [id], onDelete: Restrict)
   requestedBy            User               @relation("RequestedBy", fields: [requestedById], references: [id], onDelete: Restrict)
   decisions              ApprovalDecision[]
 
@@ -303,6 +355,7 @@ model ApprovalRequest {
   @@unique([chartImportId, objectVersion])
   @@unique([businessPartnerId, objectVersion])
   @@unique([chartSelectionId, objectVersion])
+  @@unique([accountingDocumentId, objectVersion])
   @@index([companyId, status])
 }
 

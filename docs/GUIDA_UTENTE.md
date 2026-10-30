@@ -49,6 +49,14 @@ Dopo l'approvazione il responsabile deve eseguire separatamente la finalizzazion
 
 Dopo aver finalizzato almeno un piano, apri **Piano dei conti** e scegli **Proponi come operativo**. La proposta nasce come bozza: inviala alla revisione e attendi approvazione e finalizzazione. La piattaforma considera operativo soltanto il piano dell'ultima selezione finalizzata e conserva le selezioni precedenti nello storico immutabile.
 
+## Caricare una fattura elettronica
+
+Apri **Documenti** e scegli un file XML FatturaPA UTF-8. Il sistema controlla il formato, rifiuta contenuti XML pericolosi, calcola l'hash SHA-256 e blocca lo stesso documento caricato due volte per l'azienda attiva. Un esempio fittizio e disponibile in `docs/esempi/fattura-pa-fittizia.xml`.
+
+L'anteprima mostra fornitore, numero, data, imponibile, IVA, totale, affidabilita e anomalie. Tutti gli importi sono in centesimi interi; il file originale non viene inviato a terzi. Il caricamento non crea registrazioni contabili.
+
+Se i dati sono coerenti, scegli **Invia alla revisione**. Un responsabile controlla i valori e le anomalie, approva o respinge con motivazione e finalizza separatamente. Anche dopo la finalizzazione non parte alcuna registrazione o trasmissione automatica.
+
 ## Creare una richiesta
 
 Nella Fase 1 la creazione di una scrittura dimostrativa e l'invio alla revisione sono disponibili tramite le API protette `/api/drafts` e `/api/drafts/{id}/request-approval`. L'interfaccia guidata per l'operatore viene introdotta con onboarding e anagrafiche nella Fase 2; non e simulata nella dashboard corrente.

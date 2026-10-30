@@ -11,6 +11,7 @@ const businessPartnerMigration = readFileSync(resolve("prisma/migrations/2026102
 const openingBalancesMigration = readFileSync(resolve("prisma/migrations/202610280002_phase2_opening_balances/migration.sql"), "utf8");
 const accountingDraftGateMigration = readFileSync(resolve("prisma/migrations/202610280003_accounting_draft_approval_gate/migration.sql"), "utf8");
 const operationalChartMigration = readFileSync(resolve("prisma/migrations/202610280004_phase2_operational_chart/migration.sql"), "utf8");
+const fatturaPaDocumentMigration = readFileSync(resolve("prisma/migrations/202610290001_phase3_fatturapa_documents/migration.sql"), "utf8");
 let database: PGlite;
 
 const companyId = "00000000-0000-4000-8000-000000000001";
@@ -38,6 +39,7 @@ describe("migrazione PostgreSQL eseguibile", () => {
     await database.exec(openingBalancesMigration);
     await database.exec(accountingDraftGateMigration);
     await database.exec(operationalChartMigration);
+    await database.exec(fatturaPaDocumentMigration);
   });
 
   it("blocca la finalizzazione di una scrittura non quadrata", async () => {
@@ -239,6 +241,42 @@ describe("migrazione PostgreSQL eseguibile", () => {
       UPDATE "ChartSelection" SET status = 'FINALIZED', "finalizedAt" = now() WHERE id = '${selectionId}';
     `);
     await expect(database.exec(`UPDATE "ChartSelection" SET version = 2 WHERE id = '${selectionId}';`))
+      .rejects.toThrow(/immutabile/i);
+  });
+
+  it("mantiene i documenti in bozza e rende immutabili i dati estratti finalizzati", async () => {
+    const documentId = "00000000-0000-4000-8000-000000000040";
+    const approvalId = "00000000-0000-4000-8000-000000000041";
+    await database.exec(`
+      INSERT INTO "Company" (id, name, "updatedAt") VALUES ('${companyId}', 'Azienda test isolata', now());
+      INSERT INTO "User" (id, email, "passwordHash", "displayName", "updatedAt")
+        VALUES ('${userId}', 'utente@example.test', 'hash-fittizio', 'Utente fittizio', now());
+    `);
+    await expect(database.exec(`
+      INSERT INTO "AccountingDocument" (id, "companyId", kind, "sourceFileName", "mediaType", "fileHash", "byteSize", "storageKey", status, "createdById", "updatedAt")
+        VALUES ('00000000-0000-4000-8000-000000000049', '${companyId}', 'FATTURA_PA_XML', 'vietata.xml', 'application/xml', '${"b".repeat(64)}', 100, 'test/vietata.xml', 'FINALIZED', '${userId}', now());
+    `)).rejects.toThrow(/bozza/i);
+    await database.exec(`
+      INSERT INTO "AccountingDocument" (id, "companyId", kind, "sourceFileName", "mediaType", "fileHash", "byteSize", "storageKey", "createdById", "updatedAt")
+        VALUES ('${documentId}', '${companyId}', 'FATTURA_PA_XML', 'fattura-fittizia.xml', 'application/xml', '${"a".repeat(64)}', 100, 'test/fattura.xml', '${userId}', now());
+      INSERT INTO "DocumentExtraction" (id, "documentId", "documentNumber", "currencyCode", "taxableCents", "vatCents", "totalCents", "confidencePermille", "sourceReferences", warnings)
+        VALUES ('00000000-0000-4000-8000-000000000042', '${documentId}', 'FT-TEST', 'EUR', 10000, 2200, 12200, 1000, '{}', '[]');
+    `);
+    await expect(database.exec(`UPDATE "AccountingDocument" SET status = 'FINALIZED', "finalizedAt" = now() WHERE id = '${documentId}';`))
+      .rejects.toThrow(/transizione|approvazione/i);
+    await database.exec(`
+      INSERT INTO "ApprovalRequest" (id, "companyId", "accountingDocumentId", "objectType", "objectVersion", "objectHash", "requestedById", snapshot, diff, anomalies, "updatedAt")
+        VALUES ('${approvalId}', '${companyId}', '${documentId}', 'ACCOUNTING_DOCUMENT', 1, 'hash-documento', '${userId}', '{}', '{}', '[]', now());
+      INSERT INTO "ApprovalDecision" (id, "approvalRequestId", "actorId", decision, "observedHash")
+        VALUES ('00000000-0000-4000-8000-000000000043', '${approvalId}', '${userId}', 'APPROVE', 'hash-documento');
+      UPDATE "ApprovalRequest" SET status = 'APPROVED' WHERE id = '${approvalId}';
+      UPDATE "AccountingDocument" SET status = 'PENDING_APPROVAL' WHERE id = '${documentId}';
+      UPDATE "AccountingDocument" SET status = 'APPROVED' WHERE id = '${documentId}';
+      UPDATE "AccountingDocument" SET status = 'FINALIZED', "finalizedAt" = now() WHERE id = '${documentId}';
+    `);
+    await expect(database.exec(`UPDATE "DocumentExtraction" SET "totalCents" = 9999 WHERE "documentId" = '${documentId}';`))
+      .rejects.toThrow(/immutabili/i);
+    await expect(database.exec(`UPDATE "AccountingDocument" SET "sourceFileName" = 'alterata.xml' WHERE id = '${documentId}';`))
       .rejects.toThrow(/immutabile/i);
   });
 });

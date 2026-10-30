@@ -107,6 +107,54 @@ function snapshotChartSelection(selection: {
   };
 }
 
+function snapshotAccountingDocument(document: {
+  id: string;
+  kind: string;
+  sourceFileName: string;
+  fileHash: string;
+  byteSize: number;
+  version: number;
+  extraction: {
+    supplierName: string | null;
+    supplierVatNumber: string | null;
+    customerVatNumber: string | null;
+    documentNumber: string | null;
+    issueDate: Date | null;
+    currencyCode: string;
+    taxableCents: bigint | null;
+    vatCents: bigint | null;
+    totalCents: bigint | null;
+    dueDate: Date | null;
+    confidencePermille: number;
+    sourceReferences: Prisma.JsonValue;
+    warnings: Prisma.JsonValue;
+  } | null;
+}) {
+  return {
+    id: document.id,
+    kind: document.kind,
+    sourceFileName: document.sourceFileName,
+    fileHash: document.fileHash,
+    byteSize: document.byteSize,
+    version: document.version,
+    extraction: document.extraction ? {
+      supplierName: document.extraction.supplierName,
+      supplierVatNumber: document.extraction.supplierVatNumber,
+      customerVatNumber: document.extraction.customerVatNumber,
+      documentNumber: document.extraction.documentNumber,
+      issueDate: document.extraction.issueDate?.toISOString().slice(0, 10) ?? null,
+      currencyCode: document.extraction.currencyCode,
+      taxableCents: document.extraction.taxableCents?.toString() ?? null,
+      vatCents: document.extraction.vatCents?.toString() ?? null,
+      totalCents: document.extraction.totalCents?.toString() ?? null,
+      dueDate: document.extraction.dueDate?.toISOString().slice(0, 10) ?? null,
+      confidencePermille: document.extraction.confidencePermille,
+      sourceReferences: document.extraction.sourceReferences,
+      warnings: document.extraction.warnings
+    } : null
+  };
+}
+
 function assertBalanced(lines: Array<{ debitCents: bigint; creditCents: bigint }>) {
   const debit = lines.reduce((sum, line) => sum + line.debitCents, 0n);
   const credit = lines.reduce((sum, line) => sum + line.creditCents, 0n);
@@ -332,6 +380,58 @@ export async function requestChartSelectionApproval(
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 }
 
+export async function requestAccountingDocumentApproval(
+  context: SessionContext,
+  accountingDocumentId: string,
+  ipAddress?: string | null
+) {
+  assertRole(context, [Role.OPERATOR, Role.ADMIN]);
+  return db.$transaction(async (tx) => {
+    const document = await tx.accountingDocument.findFirst({
+      where: { id: accountingDocumentId, companyId: context.companyId },
+      include: { extraction: true, company: true }
+    });
+    if (!document) throw new AppError("NOT_FOUND", "Documento non trovato.", 404);
+    if (document.status !== WorkStatus.DRAFT) throw new AppError("INVALID_STATE", "Il documento e gia in revisione o concluso.", 409);
+    if (!document.extraction) throw new AppError("MISSING_EXTRACTION", "Il documento non contiene dati estratti da revisionare.", 409);
+    const snapshot = snapshotAccountingDocument(document);
+    const hash = objectHash(snapshot);
+    const warnings = Array.isArray(document.extraction.warnings) ? document.extraction.warnings : [];
+    const approval = await tx.approvalRequest.create({
+      data: {
+        companyId: context.companyId,
+        accountingDocumentId: document.id,
+        objectType: "ACCOUNTING_DOCUMENT",
+        objectVersion: document.version,
+        objectHash: hash,
+        requestedById: context.userId,
+        requiresStrongConfirm: document.company.strongApprovalRequired,
+        requiresSecondApproval: document.company.fourEyesRequired,
+        snapshot: json(snapshot),
+        diff: json({ from: document.status, to: WorkStatus.PENDING_APPROVAL }),
+        anomalies: json(warnings)
+      }
+    });
+    const changed = await tx.accountingDocument.updateMany({
+      where: { id: document.id, companyId: context.companyId, version: document.version, status: WorkStatus.DRAFT },
+      data: { status: WorkStatus.PENDING_APPROVAL }
+    });
+    if (changed.count !== 1) throw new AppError("CONCURRENT_UPDATE", "Il documento e cambiato: ricarica la pagina.", 409);
+    await appendAudit(tx, {
+      companyId: context.companyId,
+      actorId: context.userId,
+      eventType: "ACCOUNTING_DOCUMENT_APPROVAL_REQUESTED",
+      entityType: "ApprovalRequest",
+      entityId: approval.id,
+      beforeValue: json({ status: WorkStatus.DRAFT }),
+      afterValue: json({ status: WorkStatus.PENDING_APPROVAL, objectHash: hash }),
+      ipAddress,
+      correlationId: randomUUID()
+    });
+    return approval;
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+}
+
 export async function approveRequest(
   context: SessionContext,
   approvalId: string,
@@ -347,7 +447,8 @@ export async function approveRequest(
         draft: { include: { lines: true } },
         chartImport: { include: { lines: { orderBy: { position: "asc" } } } },
         businessPartner: true,
-        chartSelection: { include: { chartImport: true } }
+        chartSelection: { include: { chartImport: true } },
+        accountingDocument: { include: { extraction: true } }
       }
     });
     if (!approval) throw new AppError("NOT_FOUND", "Richiesta non trovata.", 404);
@@ -357,7 +458,9 @@ export async function approveRequest(
         ? approval.businessPartner
         : approval.objectType === "CHART_SELECTION"
           ? approval.chartSelection
-          : approval.draft;
+          : approval.objectType === "ACCOUNTING_DOCUMENT"
+            ? approval.accountingDocument
+            : approval.draft;
     if (!target) throw new AppError("INVALID_APPROVAL_TARGET", "La richiesta non ha un oggetto valido.", 409);
     const currentSnapshot = approval.objectType === "CHART_IMPORT"
       ? snapshotChartImport(approval.chartImport!)
@@ -365,7 +468,9 @@ export async function approveRequest(
         ? snapshotBusinessPartner(approval.businessPartner!)
         : approval.objectType === "CHART_SELECTION"
           ? snapshotChartSelection(approval.chartSelection!)
-          : snapshotDraft(approval.draft!);
+          : approval.objectType === "ACCOUNTING_DOCUMENT"
+            ? snapshotAccountingDocument(approval.accountingDocument!)
+            : snapshotDraft(approval.draft!);
     if (target.version !== approval.objectVersion || objectHash(currentSnapshot) !== approval.objectHash) {
       throw new AppError("STALE_APPROVAL", "La bozza e cambiata: occorre una nuova revisione.", 409);
     }
@@ -407,6 +512,11 @@ export async function approveRequest(
     } else if (approval.objectType === "CHART_SELECTION" && approval.chartSelectionId) {
       targetChanged = await tx.chartSelection.updateMany({
         where: { id: approval.chartSelectionId, companyId: context.companyId, version: approval.objectVersion },
+        data: { status: nextStatus }
+      });
+    } else if (approval.objectType === "ACCOUNTING_DOCUMENT" && approval.accountingDocumentId) {
+      targetChanged = await tx.accountingDocument.updateMany({
+        where: { id: approval.accountingDocumentId, companyId: context.companyId, version: approval.objectVersion },
         data: { status: nextStatus }
       });
     } else if (approval.draftId) {
@@ -473,6 +583,11 @@ export async function rejectRequest(
         where: { id: approval.chartSelectionId, companyId: context.companyId },
         data: { status: WorkStatus.REJECTED }
       });
+    } else if (approval.objectType === "ACCOUNTING_DOCUMENT" && approval.accountingDocumentId) {
+      targetChanged = await tx.accountingDocument.updateMany({
+        where: { id: approval.accountingDocumentId, companyId: context.companyId },
+        data: { status: WorkStatus.REJECTED }
+      });
     } else if (approval.draftId) {
       targetChanged = await tx.accountingDraft.updateMany({
         where: { id: approval.draftId, companyId: context.companyId },
@@ -510,7 +625,8 @@ export async function finalizeRequest(
         draft: { include: { lines: true } },
         chartImport: { include: { lines: { orderBy: { position: "asc" } } } },
         businessPartner: true,
-        chartSelection: { include: { chartImport: true } }
+        chartSelection: { include: { chartImport: true } },
+        accountingDocument: { include: { extraction: true } }
       }
     });
     if (!approval) throw new AppError("NOT_FOUND", "Richiesta non trovata.", 404);
@@ -521,7 +637,9 @@ export async function finalizeRequest(
         ? approval.businessPartner
         : approval.objectType === "CHART_SELECTION"
           ? approval.chartSelection
-          : approval.draft;
+          : approval.objectType === "ACCOUNTING_DOCUMENT"
+            ? approval.accountingDocument
+            : approval.draft;
     if (!target) throw new AppError("INVALID_APPROVAL_TARGET", "La richiesta non ha un oggetto valido.", 409);
     const currentSnapshot = approval.objectType === "CHART_IMPORT"
       ? snapshotChartImport(approval.chartImport!)
@@ -529,7 +647,9 @@ export async function finalizeRequest(
         ? snapshotBusinessPartner(approval.businessPartner!)
         : approval.objectType === "CHART_SELECTION"
           ? snapshotChartSelection(approval.chartSelection!)
-          : snapshotDraft(approval.draft!);
+          : approval.objectType === "ACCOUNTING_DOCUMENT"
+            ? snapshotAccountingDocument(approval.accountingDocument!)
+            : snapshotDraft(approval.draft!);
     if (target.version !== approval.objectVersion || objectHash(currentSnapshot) !== approval.objectHash) {
       throw new AppError("STALE_APPROVAL", "L'approvazione non corrisponde piu alla bozza corrente.", 409);
     }
@@ -577,6 +697,19 @@ export async function finalizeRequest(
       entityType = "ChartSelection";
       entityId = approval.chartSelectionId;
       eventType = "CHART_SELECTION_FINALIZED";
+    } else if (approval.objectType === "ACCOUNTING_DOCUMENT" && approval.accountingDocumentId && approval.accountingDocument) {
+      changed = await tx.accountingDocument.updateMany({
+        where: {
+          id: approval.accountingDocumentId,
+          companyId: context.companyId,
+          version: approval.objectVersion,
+          status: WorkStatus.APPROVED
+        },
+        data: { status: WorkStatus.FINALIZED, finalizedAt: now }
+      });
+      entityType = "AccountingDocument";
+      entityId = approval.accountingDocumentId;
+      eventType = "ACCOUNTING_DOCUMENT_FINALIZED";
     } else if (approval.draftId && approval.draft) {
       assertBalanced(approval.draft.lines);
       changed = await tx.accountingDraft.updateMany({

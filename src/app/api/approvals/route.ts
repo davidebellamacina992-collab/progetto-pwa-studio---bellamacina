@@ -23,7 +23,8 @@ export async function GET(request: Request) {
         draft: { select: { description: true } },
         chartImport: { select: { sourceFileName: true } },
         businessPartner: { select: { displayName: true, kind: true } },
-        chartSelection: { include: { chartImport: { select: { sourceFileName: true } } } }
+        chartSelection: { include: { chartImport: { select: { sourceFileName: true } } } },
+        accountingDocument: { select: { sourceFileName: true } }
       },
       orderBy: { createdAt: "desc" }, take: 100
     });
@@ -35,10 +36,12 @@ export async function GET(request: Request) {
           ? "Anagrafica · " + (item.businessPartner?.displayName ?? "Cliente o fornitore")
           : item.objectType === "CHART_SELECTION"
             ? "Piano operativo · " + (item.chartSelection?.chartImport.sourceFileName ?? "Selezione")
-            : (item.draft?.description ?? "Scrittura contabile"),
+            : item.objectType === "ACCOUNTING_DOCUMENT"
+              ? "Documento · " + (item.accountingDocument?.sourceFileName ?? "FatturaPA")
+              : (item.draft?.description ?? "Scrittura contabile"),
       objectType: item.objectType === "CHART_IMPORT"
         ? "Piano dei conti"
-        : item.objectType === "BUSINESS_PARTNER" ? "Anagrafica" : item.objectType === "CHART_SELECTION" ? "Piano operativo" : "Scrittura contabile",
+        : item.objectType === "BUSINESS_PARTNER" ? "Anagrafica" : item.objectType === "CHART_SELECTION" ? "Piano operativo" : item.objectType === "ACCOUNTING_DOCUMENT" ? "Documento contabile" : "Scrittura contabile",
       requestedBy: item.requestedBy.displayName,
       requestedAt: item.createdAt.toISOString(),
       riskLevel: item.requiresSecondApproval ? "ALTO" : "MEDIO",

@@ -45,7 +45,7 @@ Ogni tabella di dominio include `companyId` direttamente o attraverso una relazi
 
 ## File e integrazioni
 
-Il caricamento documenti sara introdotto in Fase 3 con allowlist di formati, limite dimensione, verifica magic bytes, quarantena, hash SHA-256 e scansione malware. Nessuna integrazione esterna e attiva nella Fase 1.
+Il primo caricamento della Fase 3 accetta esclusivamente XML FatturaPA UTF-8 fino a 10 MiB. Il parser richiede la radice FatturaPA, rifiuta DTD ed entita, calcola SHA-256, separa lo storage per azienda e blocca duplicati nello stesso tenant. I file non vengono eseguiti ne inviati a integrazioni esterne. Prima della produzione restano obbligatorie scansione malware, quarantena, cifratura del volume, backup e retention configurata.
 
 ## Gestione segreti
 

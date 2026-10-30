@@ -114,6 +114,12 @@
 
 **Motivazione:** un semplice campo modificabile sull'azienda permetterebbe di sostituire una configurazione contabile senza conservare la decisione precedente. Una sequenza di selezioni immutabili mantiene storia, approvatori, hash e audit e consente correzioni soltanto tramite una nuova proposta.
 
+## D-020 - FatturaPA deterministica prima di OCR o AI
+
+**Decisione:** il primo import documentale accetta soltanto XML FatturaPA UTF-8, rifiuta DTD ed entita, conserva l'originale con SHA-256 ed estrae campi noti con regole deterministiche. Gli importi sono convertiti esattamente in centesimi; precisioni non rappresentabili vengono respinte.
+
+**Motivazione:** il formato strutturato consente tracciabilita campo per campo e un dataset di controllo prima di introdurre PDF, OCR o suggerimenti AI. L'estrazione resta una bozza separata dalla futura proposta di registrazione e attraversa lo stesso gate umano.
+
 ## Registro di fase
 
 La Fase 1 stabilisce le fondamenta. Le decisioni su OCR, storage, coda e formati di export saranno finalizzate nelle fasi che introducono tali funzioni.
